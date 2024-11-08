@@ -22,24 +22,41 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
- defined('MOODLE_INTERNAL') || die;
- 
- if ($ADMIN->fulltree) {
-     // Campo de configuración para el token de la API de LimeSurvey.
-     $settings->add(new admin_setting_configtext(
-         'block_limesurvey/api_token',
-         get_string('api_token', 'block_limesurvey'),
-         get_string('api_token_desc', 'block_limesurvey'),
-         '', // Valor por defecto (vacío)
-         PARAM_TEXT
-     ));
- 
-     // Campo de configuración para la URL de la API de LimeSurvey.
-     $settings->add(new admin_setting_configtext(
-         'block_limesurvey/api_url',
-         get_string('api_url', 'block_limesurvey'),
-         get_string('api_url_desc', 'block_limesurvey'),
-         'https://your-limesurvey-domain/index.php/admin/remotecontrol', // URL por defecto
-         PARAM_URL
-     ));
- }
+defined('MOODLE_INTERNAL') || die;
+
+if ($ADMIN->fulltree) {
+    // Campo de configuración para el token de la API de LimeSurvey.
+    $settings->add(new admin_setting_configtext(
+        'block_limesurvey/api_token',
+        get_string('api_token', 'block_limesurvey'),
+        get_string('api_token_desc', 'block_limesurvey'),
+        '', // Valor por defecto (vacío)
+        PARAM_TEXT
+    ));
+
+    // Campo de configuración para la URL de la API de LimeSurvey.
+    $settings->add(new admin_setting_configtext(
+        'block_limesurvey/api_url',
+        get_string('api_url', 'block_limesurvey'),
+        get_string('api_url_desc', 'block_limesurvey'),
+        'https://your-limesurvey-domain/index.php/admin/remotecontrol', // URL por defecto
+        PARAM_URL
+    ));
+
+    // Campo de configuración para el usuario de la API de LimeSurvey.
+    $settings->add(new admin_setting_configtext(
+        'block_limesurvey/api_user',
+        get_string('api_user', 'block_limesurvey'),
+        get_string('api_user_desc', 'block_limesurvey'),
+        '', // Valor por defecto (vacío)
+        PARAM_TEXT
+    ));
+
+    // Campo de configuración para la contraseña de la API de LimeSurvey.
+    $settings->add(new admin_setting_configpasswordunmask(
+        'block_limesurvey/api_password',
+        get_string('api_password', 'block_limesurvey'),
+        get_string('api_password_desc', 'block_limesurvey'),
+        '' // Valor por defecto (vacío)
+    ));
+}
