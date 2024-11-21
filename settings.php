@@ -25,14 +25,14 @@
 defined('MOODLE_INTERNAL') || die;
 
 if ($ADMIN->fulltree) {
-    // Campo de configuración para el token de la API de LimeSurvey.
-    $settings->add(new admin_setting_configtext(
-        'block_limesurvey/api_token',
-        get_string('api_token', 'block_limesurvey'),
-        get_string('api_token_desc', 'block_limesurvey'),
-        '', // Valor por defecto (vacío)
-        PARAM_TEXT
-    ));
+    // // Campo de configuración para el token de la API de LimeSurvey.
+    // $settings->add(new admin_setting_configtext(
+    //     'block_limesurvey/api_token',
+    //     get_string('api_token', 'block_limesurvey'),
+    //     get_string('api_token_desc', 'block_limesurvey'),
+    //     '', // Valor por defecto (vacío)
+    //     PARAM_TEXT
+    // ));
 
     // Campo de configuración para la URL de la API de LimeSurvey.
     $settings->add(new admin_setting_configtext(
