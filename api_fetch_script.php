@@ -57,8 +57,31 @@ if ($apiUrl && $apiUser && $apiPassword) {
 
                             // Mostrar todos los enlaces con los tokens encontrados
                             foreach ($tokens as $token) {
+                                // Recuperar el ajuste desde la configuración.
+                                $config_atributosextra = get_config('block_limesurvey', 'atributosextra');
+
+                                // Convertir la cadena en un array.
+                                $atributosextra_keys = array_map('trim', explode(',', $config_atributosextra));
+
+                                // Inicializar el array de atributos extra.
+                                $atributosextra = [];
+
+                                // Añadir los valores de los atributos extra al array.
+                                foreach ($atributosextra_keys as $key) {
+                                    if (isset($participant['participant_info'][$key])) {
+                                        $atributosextra[] = htmlspecialchars($participant['participant_info'][$key]);
+                                    }
+                                }
+
+                                // Agregar valores dinámicos si es necesario.
+                                $atributosextra[] = htmlspecialchars($token);
+
+
+                                // $atritubosextra = ["atributo1", "atributo2", htmlspecialchars($token)];
+
                                 $surveyUrl = $baseUrl . '/survey?sid=' . $survey['sid'] . '&token=' . $token;
-                                $content .= '<li><a href="' . $surveyUrl . '" target="_blank">' . $surveyTitle . ' (Token: ' . htmlspecialchars($token) . ')</a></li>';
+                                $extraAttributes = implode(', ', $atributosextra);
+                                $content .= '<li><a href="' . $surveyUrl . '" target="_blank">' . $surveyTitle . ($extraAttributes ? ', ' . $extraAttributes : '') .'</a></li>';
                             }
                         }
                     }

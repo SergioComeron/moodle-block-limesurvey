@@ -59,4 +59,12 @@ if ($ADMIN->fulltree) {
         get_string('api_password_desc', 'block_limesurvey'),
         '' // Valor por defecto (vacío)
     ));
+
+    $settings->add(new admin_setting_configtext(
+        'block_limesurvey/atributosextra', // Nombre interno del ajuste
+        get_string('atributosextra', 'block_limesurvey'), // Nombre que verá el usuario
+        get_string('atributosextra_desc', 'block_limesurvey'), // Descripción del ajuste
+        '', // Valor predeterminado (puedes poner "atributo1,atributo2" si lo prefieres)
+        PARAM_TEXT // Tipo de dato (texto)
+    ));
 }

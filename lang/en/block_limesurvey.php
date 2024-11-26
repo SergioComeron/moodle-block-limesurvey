@@ -8,3 +8,5 @@ $string['api_url'] = 'URL de la API de LimeSurvey';
 $string['api_user_desc'] = 'Nombre de usuario para conectarse a la API de LimeSurvey.';
 $string['api_user'] = 'Usuario de la API';
 $string['pluginname'] = 'LimeSurvey Block';
+$string['atributosextra'] = 'Atributos extra';
+$string['atributosextra_desc'] = 'Introduce los atributos extra separados por comas.';
