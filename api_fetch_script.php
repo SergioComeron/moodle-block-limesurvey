@@ -31,8 +31,20 @@ if ($apiUrl && $apiUser && $apiPassword) {
             foreach ($response as $survey) {
                 if ($survey['active'] === 'Y' && !empty($survey['startdate']) && strtotime($survey['startdate']) <= $currentDate && (empty($survey['expires']) || strtotime($survey['expires']) > $currentDate)) {
                     // Obtener los participantes de la encuesta
-                    $surveyParticipants = $lsJSONRPCClient->list_participants($sessionKey, $survey['sid'], 0, 5000, false, false, ['email' => $USER->email]);
-                    
+                    $surveyParticipants = $lsJSONRPCClient->list_participants(
+                        $sessionKey, 
+                        $survey['sid'], 
+                        0, 
+                        5000, 
+                        false, 
+                        false, 
+                        ["attribute_1", "attribute_2"]
+                    );
+                    print_r($surveyParticipants);
+                    $filteredParticipants = array_filter($surveyParticipants, function($participant) use ($USER) {
+                        return isset($participant['email']) && $participant['email'] === $USER->email;
+                    });
+
                     if (is_array($surveyParticipants) && count($surveyParticipants) > 0) {
                         $tokens = [];
 
@@ -59,17 +71,22 @@ if ($apiUrl && $apiUser && $apiPassword) {
                             foreach ($tokens as $token) {
                                 // Recuperar el ajuste desde la configuración.
                                 $config_atributosextra = get_config('block_limesurvey', 'atributosextra');
-
+                                // print_r ($config_atributosextra);
                                 // Convertir la cadena en un array.
                                 $atributosextra_keys = array_map('trim', explode(',', $config_atributosextra));
-
+                                // print_r($atributosextra_keys);
                                 // Inicializar el array de atributos extra.
                                 $atributosextra = [];
-
+                                print_r($participant);
                                 // Añadir los valores de los atributos extra al array.
                                 foreach ($atributosextra_keys as $key) {
-                                    if (isset($participant['participant_info'][$key])) {
-                                        $atributosextra[] = htmlspecialchars($participant['participant_info'][$key]);
+                                    echo $key;
+                                    // if (isset($participant['participant_info']['' . $key . ''])) {
+                                    echo $participant['participant_info']['attribute_1'];
+                                    if (isset($participant['participant_info']['email'])) {
+                                        // $atributosextra[] = htmlspecialchars($participant['participant_info'][$key]);
+                                        echo "Ha entrado";
+                                        $atributosextra[] = htmlspecialchars($participant['participant_info']['attribute_1']);
                                     }
                                 }
 
