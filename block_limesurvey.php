@@ -16,7 +16,8 @@ class block_limesurvey extends block_base {
         // Inicializar el contenido del bloque con un mensaje de carga
         $this->content = new stdClass();
         $this->content->text = '<div id="limesurvey-content">Cargando encuestas...</div>';
-        $this->content->footer = '<script>
+        
+        $this->content->footer = '<script async defer>
             document.addEventListener("DOMContentLoaded", function() {
                 fetch("'.$CFG->wwwroot. '/blocks/limesurvey/api_fetch_script.php")
                     .then(response => response.text())
@@ -29,7 +30,10 @@ class block_limesurvey extends block_base {
                     });
             });
         </script>';
-
+        $this->content->footer = '<div style="font-size: small;">
+        ✅ Encuesta realizada.<br>
+        ⬜️ Encuesta pendiente.
+    </div>' . $this->content->footer;
         return $this->content;
     }
 

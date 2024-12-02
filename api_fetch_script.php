@@ -25,27 +25,33 @@ if ($apiUrl && $apiUser && $apiPassword) {
         $response = $lsJSONRPCClient->list_surveys($sessionKey);
 
         if (is_array($response)) {
-            $content .= '<strong>Encuestas activas:</strong><ul>';
+            $content .= '<strong>Encuestas en curso:</strong><ul>';
             $currentDate = time();
-            // print_r($response);
             foreach ($response as $survey) {
                 if ($survey['active'] === 'Y' && !empty($survey['startdate']) && strtotime($survey['startdate']) <= $currentDate && (empty($survey['expires']) || strtotime($survey['expires']) > $currentDate)) {
-                    // Obtener los participantes de la encuesta
+
+                    // Obtener los atributos extra desde la configuración del bloque.
+                    $atributosExtraConfig = get_config('block_limesurvey', 'atributosextra');
+                    // Convertir la cadena de atributos separados por comas en un array.
+                    $atributosExtraArray = array_map('trim', explode(',', $atributosExtraConfig));
+
+                    // Llamar al método list_participants con los atributos configurados.
                     $surveyParticipants = $lsJSONRPCClient->list_participants(
-                        $sessionKey, 
-                        $survey['sid'], 
-                        0, 
-                        5000, 
-                        false, 
-                        false, 
-                        ["attribute_1", "attribute_2"]
+                        $sessionKey,
+                        $survey['sid'],
+                        0,
+                        5000,
+                        false,
+                        $atributosExtraArray, // Usar los atributos configurados.
+                        ['email' => $USER->email]
                     );
-                    print_r($surveyParticipants);
+
                     $filteredParticipants = array_filter($surveyParticipants, function($participant) use ($USER) {
                         return isset($participant['email']) && $participant['email'] === $USER->email;
                     });
 
                     if (is_array($surveyParticipants) && count($surveyParticipants) > 0) {
+
                         $tokens = [];
 
                         foreach ($surveyParticipants as $participant) {
@@ -57,6 +63,9 @@ if ($apiUrl && $apiUser && $apiPassword) {
 
                         // Mostrar la encuesta solo si se encontraron tokens
                         if (!empty($tokens)) {
+                            // echo "<br>";
+                            // echo 'el id: '.$survey['sid'];
+
                             $surveyTitle = htmlspecialchars($survey['surveyls_title']);
                             // Parsear la URL y obtener solo la parte base
                             $parsedUrl = parse_url($apiUrl);
@@ -69,36 +78,64 @@ if ($apiUrl && $apiUser && $apiPassword) {
 
                             // Mostrar todos los enlaces con los tokens encontrados
                             foreach ($tokens as $token) {
-                                // Recuperar el ajuste desde la configuración.
-                                $config_atributosextra = get_config('block_limesurvey', 'atributosextra');
-                                // print_r ($config_atributosextra);
-                                // Convertir la cadena en un array.
-                                $atributosextra_keys = array_map('trim', explode(',', $config_atributosextra));
-                                // print_r($atributosextra_keys);
-                                // Inicializar el array de atributos extra.
-                                $atributosextra = [];
-                                print_r($participant);
-                                // Añadir los valores de los atributos extra al array.
-                                foreach ($atributosextra_keys as $key) {
-                                    echo $key;
-                                    // if (isset($participant['participant_info']['' . $key . ''])) {
-                                    echo $participant['participant_info']['attribute_1'];
-                                    if (isset($participant['participant_info']['email'])) {
-                                        // $atributosextra[] = htmlspecialchars($participant['participant_info'][$key]);
-                                        echo "Ha entrado";
-                                        $atributosextra[] = htmlspecialchars($participant['participant_info']['attribute_1']);
+                               // Inicializa la variable booleana
+                                $hasResponses = false;
+
+                                try {
+                                    // Llama a la API para exportar las respuestas
+                                    $responsesbytoken = $lsJSONRPCClient->export_responses_by_token(
+                                        $sessionKey,
+                                        $survey['sid'],
+                                        'json',
+                                        $token,
+                                        null,
+                                        'all', // Usamos 'all' para incluir respuestas incompletas
+                                        0,
+                                        5000
+                                    );
+
+                                    // Verifica si hay respuestas
+                                    $hayRespuesta = false; // Variable para indicar si hay respuesta
+
+                                    if (is_array($responsesbytoken)) {
+                                        // Si $respuestas es un array, comprobamos si tiene al menos un elemento no vacío
+                                        // $hayRespuesta = !empty($responsesbytoken);
+                                        $hayRespuesta = false;
+                                        // echo "array";
+                                    } elseif (is_string($responsesbytoken)) {
+                                        // Si $respuestas es una cadena, podemos comprobar si contiene datos
+                                        $decoded = base64_decode($responsesbytoken, true); // El segundo parámetro evita errores al decodificar
+                                        $hayRespuesta = $decoded !== false && $decoded !== '';
+                                        
+                                        // echo "string";
+                                    } else {
+                                        // Si $respuestas no es ni un array ni una cadena, se considera que no hay respuesta
+                                        $hayRespuesta = false;
+                                        // echo "nada";
                                     }
+                                } catch (Exception $e) {
+                                    // Manejo de errores (opcional: puedes dejar la variable en `false` si falla la API)
+                                    error_log("Error al exportar respuestas: " . $e->getMessage());
+                                    $hasResponses = false;
                                 }
 
-                                // Agregar valores dinámicos si es necesario.
-                                $atributosextra[] = htmlspecialchars($token);
-
-
-                                // $atritubosextra = ["atributo1", "atributo2", htmlspecialchars($token)];
-
+                                // Recuperar el ajuste desde la configuración.
+                                $config_atributosextra = get_config('block_limesurvey', 'atributosextra');
+                                // Convertir la cadena en un array.
+                                $atributosextra_keys = array_map('trim', explode(',', $config_atributosextra));
+                                // Inicializar el array de atributos extra.
+                                $atributosextra = [];
+                                // Añadir los valores de los atributos extra al array.
+                                foreach ($atributosextra_keys as $key) {
+                                    if (isset($participant[$key]) && !in_array($participant[$key], $atributosextra)) {
+                                        $atributosextra[] = htmlspecialchars($participant[$key]);
+                                    }
+                                }
                                 $surveyUrl = $baseUrl . '/survey?sid=' . $survey['sid'] . '&token=' . $token;
                                 $extraAttributes = implode(', ', $atributosextra);
-                                $content .= '<li><a href="' . $surveyUrl . '" target="_blank">' . $surveyTitle . ($extraAttributes ? ', ' . $extraAttributes : '') .'</a></li>';
+
+                                $respondedSymbol = $hayRespuesta ? '✅ ' : '⬜️';
+                                $content .= '<li><a href="' . $surveyUrl . '" target="_blank">' . $respondedSymbol . $surveyTitle . ($extraAttributes ? ', ' . $extraAttributes : '') .'</a></li>';
                             }
                         }
                     }
@@ -106,7 +143,7 @@ if ($apiUrl && $apiUser && $apiPassword) {
             }
             $content .= '</ul>';
         } else {
-            $content .= '<br>No tienes encuestas activas.';
+            $content .= '<br>No tienes encuestas en curso.';
         }
 
         $lsJSONRPCClient->release_session_key($sessionKey);
