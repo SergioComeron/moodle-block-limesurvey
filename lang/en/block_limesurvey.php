@@ -10,3 +10,4 @@ $string['api_user'] = 'Usuario de la API';
 $string['pluginname'] = 'LimeSurvey Block';
 $string['atributosextra'] = 'Atributos extra';
 $string['atributosextra_desc'] = 'Introduce los atributos extra separados por comas.';
+$string['limesurvey:myaddinstance'] = 'Añadir un nuevo bloque de LimeSurvey a la página de inicio';
