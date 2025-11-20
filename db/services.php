@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Version details for block_limesurvey.
+ * External functions and service definitions for block_limesurvey.
  *
  * @package   block_limesurvey
  * @copyright 2024, Sergio
@@ -24,8 +24,13 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'block_limesurvey';
-$plugin->version = 2025112000; // YYYYMMDDXX - Updated for security refactor.
-$plugin->requires = 2021051700; // Requires Moodle 3.11 or higher.
-$plugin->maturity = MATURITY_BETA;
-$plugin->release = 'v2.0';
+$functions = [
+    'block_limesurvey_get_surveys' => [
+        'classname'   => 'block_limesurvey\external\get_surveys',
+        'methodname'  => 'execute',
+        'description' => 'Get LimeSurvey surveys for the current user',
+        'type'        => 'read',
+        'ajax'        => true,
+        'loginrequired' => true,
+    ],
+];

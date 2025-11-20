@@ -1,42 +1,69 @@
 <?php
-require_once 'jsonrpcphp-master/src/org/jsonrpcphp/JsonRPCClient.php';
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Block limesurvey main class.
+ *
+ * @package   block_limesurvey
+ * @copyright 2024, Sergio
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+defined('MOODLE_INTERNAL') || die();
+
+/**
+ * LimeSurvey block class.
+ */
 class block_limesurvey extends block_base {
+
+    /**
+     * Initialize block.
+     */
     public function init() {
         $this->title = get_string('pluginname', 'block_limesurvey');
     }
 
+    /**
+     * Get block content.
+     *
+     * @return stdClass
+     */
     public function get_content() {
-        global $CFG;
+        global $PAGE;
 
         if ($this->content !== null) {
             return $this->content;
         }
 
-        // Inicializar el contenido del bloque con un mensaje de carga
         $this->content = new stdClass();
-        $this->content->text = '<div id="limesurvey-content">Cargando encuestas...</div>';
-        
-        $this->content->footer = '<script async defer>
-            document.addEventListener("DOMContentLoaded", function() {
-                fetch("'.$CFG->wwwroot. '/blocks/limesurvey/api_fetch_script.php")
-                    .then(response => response.text())
-                    .then(data => {
-                        document.getElementById("limesurvey-content").innerHTML = data;
-                    })
-                    .catch(error => {
-                        document.getElementById("limesurvey-content").innerHTML = "Error cargando encuestas.";
-                        console.error("Error:", error);
-                    });
-            });
-        </script>';
-        $this->content->footer = '<div style="font-size: small;">
-        ✅ Encuesta realizada.<br>
-        ⬜️ Encuesta pendiente.
-    </div>' . $this->content->footer;
+        $this->content->text = '<div id="limesurvey-content">' .
+            get_string('loading', 'block_limesurvey') . '</div>';
+        $this->content->footer = '';
+
+        // Initialize AMD module to load surveys.
+        $PAGE->requires->js_call_amd('block_limesurvey/surveys', 'init');
+
         return $this->content;
     }
 
+    /**
+     * Define where this block can be added.
+     *
+     * @return array
+     */
     public function applicable_formats() {
         return [
             'admin' => false,
@@ -47,6 +74,20 @@ class block_limesurvey extends block_base {
         ];
     }
 
+    /**
+     * Allow multiple instances of this block.
+     *
+     * @return bool
+     */
+    public function instance_allow_multiple() {
+        return false;
+    }
+
+    /**
+     * This block has global configuration.
+     *
+     * @return bool
+     */
     public function has_config() {
         return true;
     }

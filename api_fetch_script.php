@@ -14,142 +14,165 @@ $apiPassword = get_config('block_limesurvey', 'api_password');
 
 $content = '';
 
+// **VARIABLES GLOBALES PARA DEBUG** ⬇️
+$debug_info = [
+    'sessionKey' => null,
+    'response' => null,
+    'surveyParticipants' => null,
+    'tokens' => [],
+    'responsesbytoken' => null,
+    'hayRespuesta' => null,
+    'errors' => []
+];
+// **FIN VARIABLES DEBUG** ⬆️
+
+// Validar que la configuración esté completa
+if (empty($apiUrl) || empty($apiUser) || empty($apiPassword)) {
+    echo '<div class="alert alert-warning">Por favor, configure el bloque LimeSurvey en la administración del sitio.</div>';
+    exit;
+}
+
+// Validar que no sea la URL de ejemplo
+if (strpos($apiUrl, 'your-limesurvey-domain') !== false) {
+    echo '<div class="alert alert-warning">Por favor, configure la URL real de LimeSurvey en los ajustes del bloque.</div>';
+    exit;
+}
+
 // Verificar que la configuración de la API esté disponible
 if ($apiUrl && $apiUser && $apiPassword) {
-    $lsJSONRPCClient = new \org\jsonrpcphp\JsonRPCClient($apiUrl);
-    $sessionKey = $lsJSONRPCClient->get_session_key($apiUser, $apiPassword);
+    try {
+        $lsJSONRPCClient = new \org\jsonrpcphp\JsonRPCClient($apiUrl);
+        $sessionKey = $lsJSONRPCClient->get_session_key($apiUser, $apiPassword);
+        $debug_info['sessionKey'] = is_string($sessionKey) ? 'OK' : $sessionKey;
 
-    if (is_array($sessionKey)) {
-        $content .= '<br>Error obteniendo la clave de sesión: ' . json_encode($sessionKey);
-    } else {
-        $response = $lsJSONRPCClient->list_surveys($sessionKey);
+        if (is_array($sessionKey)) {
+            $content .= '<br>Error obteniendo la clave de sesión: ' . json_encode($sessionKey);
+            $debug_info['errors'][] = 'Error en session key: ' . json_encode($sessionKey);
+        } else {
+            $response = $lsJSONRPCClient->list_surveys($sessionKey);
+            $debug_info['response'] = $response;
 
-        if (is_array($response)) {
-            $content .= '<strong>Encuestas en curso:</strong><ul>';
-            $currentDate = time();
-            foreach ($response as $survey) {
-                if ($survey['active'] === 'Y' && !empty($survey['startdate']) && strtotime($survey['startdate']) <= $currentDate && (empty($survey['expires']) || strtotime($survey['expires']) > $currentDate)) {
+            if (is_array($response) && !empty($response) && isset($response[0]['sid'])) {
+                $content .= '<strong>Encuestas en curso:</strong><ul>';
+                $currentDate = time();
+                foreach ($response as $survey) {
+                    // Validar que $survey sea un array con las claves necesarias
+                    if (!is_array($survey) || !isset($survey['active'], $survey['sid'])) {
+                        continue;
+                    }
+                    
+                    if ($survey['active'] === 'Y' && !empty($survey['startdate']) && strtotime($survey['startdate']) <= $currentDate && (empty($survey['expires']) || strtotime($survey['expires']) > $currentDate)) {
 
-                    // Obtener los atributos extra desde la configuración del bloque.
-                    $atributosExtraConfig = get_config('block_limesurvey', 'atributosextra');
-                    // Convertir la cadena de atributos separados por comas en un array.
-                    $atributosExtraArray = array_map('trim', explode(',', $atributosExtraConfig));
+                        $atributosExtraConfig = get_config('block_limesurvey', 'atributosextra');
+                        $atributosExtraArray = array_map('trim', explode(',', $atributosExtraConfig));
 
-                    // Llamar al método list_participants con los atributos configurados.
-                    $surveyParticipants = $lsJSONRPCClient->list_participants(
-                        $sessionKey,
-                        $survey['sid'],
-                        0,
-                        5000,
-                        false,
-                        $atributosExtraArray, // Usar los atributos configurados.
-                        ['email' => $USER->email]
-                    );
+                        $surveyParticipants = $lsJSONRPCClient->list_participants(
+                            $sessionKey,
+                            $survey['sid'],
+                            0,
+                            5000,
+                            false,
+                            $atributosExtraArray,
+                            ['email' => $USER->email]
+                        );
+                        $debug_info['surveyParticipants'] = $surveyParticipants;
 
-                    $filteredParticipants = array_filter($surveyParticipants, function($participant) use ($USER) {
-                        return isset($participant['email']) && $participant['email'] === $USER->email;
-                    });
+                        if (is_array($surveyParticipants) && count($surveyParticipants) > 0) {
 
-                    if (is_array($surveyParticipants) && count($surveyParticipants) > 0) {
+                            $tokens = [];
 
-                        $tokens = [];
-
-                        foreach ($surveyParticipants as $participant) {
-                            // Verificar si 'participant_info' existe y tiene un 'email' que coincide con el email buscado
-                            if (isset($participant['participant_info']['email']) && $participant['participant_info']['email'] === $USER->email) {
-                                $tokens[] = $participant['token'];
+                            foreach ($surveyParticipants as $participant) {
+                                if (isset($participant['participant_info']['email']) && $participant['participant_info']['email'] === $USER->email) {
+                                    $tokens[] = $participant['token'];
+                                }
                             }
-                        }
+                            $debug_info['tokens'] = $tokens;
 
-                        // Mostrar la encuesta solo si se encontraron tokens
-                        if (!empty($tokens)) {
-                            // echo "<br>";
-                            // echo 'el id: '.$survey['sid'];
+                            if (!empty($tokens)) {
+                                $surveyTitle = htmlspecialchars($survey['surveyls_title']);
+                                $parsedUrl = parse_url($apiUrl);
+                                $baseUrl = $parsedUrl['scheme'] . '://' . $parsedUrl['host'] . $parsedUrl['path'];
+                                $baseUrl = preg_replace('/\/index\.php.*/', '/index.php', $baseUrl);
 
-                            $surveyTitle = htmlspecialchars($survey['surveyls_title']);
-                            // Parsear la URL y obtener solo la parte base
-                            $parsedUrl = parse_url($apiUrl);
-
-                            // Reconstruir la URL sin la ruta adicional
-                            $baseUrl = $parsedUrl['scheme'] . '://' . $parsedUrl['host'] . $parsedUrl['path'];
-
-                            // Remover cualquier parte después de `index.php`
-                            $baseUrl = preg_replace('/\/index\.php.*/', '/index.php', $baseUrl);
-
-                            // Mostrar todos los enlaces con los tokens encontrados
-                            foreach ($tokens as $token) {
-                               // Inicializa la variable booleana
-                                $hasResponses = false;
-
-                                try {
-                                    // Llama a la API para exportar las respuestas
-                                    $responsesbytoken = $lsJSONRPCClient->export_responses_by_token(
-                                        $sessionKey,
-                                        $survey['sid'],
-                                        'json',
-                                        $token,
-                                        null,
-                                        'all', // Usamos 'all' para incluir respuestas incompletas
-                                        0,
-                                        5000
-                                    );
-
-                                    // Verifica si hay respuestas
-                                    $hayRespuesta = false; // Variable para indicar si hay respuesta
-
-                                    if (is_array($responsesbytoken)) {
-                                        // Si $respuestas es un array, comprobamos si tiene al menos un elemento no vacío
-                                        // $hayRespuesta = !empty($responsesbytoken);
-                                        $hayRespuesta = false;
-                                        // echo "array";
-                                    } elseif (is_string($responsesbytoken)) {
-                                        // Si $respuestas es una cadena, podemos comprobar si contiene datos
-                                        $decoded = base64_decode($responsesbytoken, true); // El segundo parámetro evita errores al decodificar
-                                        $hayRespuesta = $decoded !== false && $decoded !== '';
-                                        
-                                        // echo "string";
-                                    } else {
-                                        // Si $respuestas no es ni un array ni una cadena, se considera que no hay respuesta
-                                        $hayRespuesta = false;
-                                        // echo "nada";
-                                    }
-                                } catch (Exception $e) {
-                                    // Manejo de errores (opcional: puedes dejar la variable en `false` si falla la API)
-                                    error_log("Error al exportar respuestas: " . $e->getMessage());
+                                foreach ($tokens as $token) {
                                     $hasResponses = false;
-                                }
 
-                                // Recuperar el ajuste desde la configuración.
-                                $config_atributosextra = get_config('block_limesurvey', 'atributosextra');
-                                // Convertir la cadena en un array.
-                                $atributosextra_keys = array_map('trim', explode(',', $config_atributosextra));
-                                // Inicializar el array de atributos extra.
-                                $atributosextra = [];
-                                // Añadir los valores de los atributos extra al array.
-                                foreach ($atributosextra_keys as $key) {
-                                    if (isset($participant[$key]) && !in_array($participant[$key], $atributosextra)) {
-                                        $atributosextra[] = htmlspecialchars($participant[$key]);
+                                    try {
+                                        $responsesbytoken = $lsJSONRPCClient->export_responses_by_token(
+                                            $sessionKey,
+                                            $survey['sid'],
+                                            'json',
+                                            $token,
+                                            null,
+                                            'all',
+                                            0,
+                                            5000
+                                        );
+                                        $debug_info['responsesbytoken'] = $responsesbytoken;
+
+                                        $hayRespuesta = false;
+
+                                        if (is_array($responsesbytoken)) {
+                                            $hayRespuesta = false;
+                                        } elseif (is_string($responsesbytoken)) {
+                                            $decoded = base64_decode($responsesbytoken, true);
+                                            $hayRespuesta = $decoded !== false && $decoded !== '';
+                                        } else {
+                                            $hayRespuesta = false;
+                                        }
+                                        $debug_info['hayRespuesta'] = $hayRespuesta;
+                                    } catch (Exception $e) {
+                                        error_log("Error al exportar respuestas: " . $e->getMessage());
+                                        $debug_info['errors'][] = 'Error export_responses: ' . $e->getMessage();
+                                        $hasResponses = false;
                                     }
-                                }
-                                $surveyUrl = $baseUrl . '/survey?sid=' . $survey['sid'] . '&token=' . $token;
-                                $extraAttributes = implode(', ', $atributosextra);
 
-                                $respondedSymbol = $hayRespuesta ? '✅ ' : '⬜️';
-                                $content .= '<li><a href="' . $surveyUrl . '" target="_blank">' . $respondedSymbol . $surveyTitle . ($extraAttributes ? ', ' . $extraAttributes : '') .'</a></li>';
+                                    $config_atributosextra = get_config('block_limesurvey', 'atributosextra');
+                                    $atributosextra_keys = array_map('trim', explode(',', $config_atributosextra));
+                                    $atributosextra = [];
+                                    foreach ($atributosextra_keys as $key) {
+                                        if (isset($participant[$key]) && !in_array($participant[$key], $atributosextra)) {
+                                            $atributosextra[] = htmlspecialchars($participant[$key]);
+                                        }
+                                    }
+                                    $surveyUrl = $baseUrl . '/survey?sid=' . $survey['sid'] . '&token=' . $token;
+                                    $extraAttributes = implode(', ', $atributosextra);
+
+                                    $respondedSymbol = $hayRespuesta ? '✅ ' : '⬜️';
+                                    $content .= '<li><a href="' . $surveyUrl . '" target="_blank">' . $respondedSymbol . $surveyTitle . ($extraAttributes ? ', ' . $extraAttributes : '') .'</a></li>';
+                                }
                             }
                         }
                     }
                 }
+                $content .= '</ul>';
+            } else {
+                $content .= '<br>No tienes encuestas en curso.';
             }
-            $content .= '</ul>';
-        } else {
-            $content .= '<br>No tienes encuestas en curso.';
-        }
 
-        $lsJSONRPCClient->release_session_key($sessionKey);
+            $lsJSONRPCClient->release_session_key($sessionKey);
+        }
+    } catch (Exception $e) {
+        $content .= '<div class="alert alert-danger">Error al conectar con LimeSurvey: ' . htmlspecialchars($e->getMessage()) . '</div>';
+        $debug_info['errors'][] = 'Exception: ' . $e->getMessage();
+        debugging('LimeSurvey connection error: ' . $e->getMessage(), DEBUG_DEVELOPER);
+        echo $content;
+        ?>
+        <script>
+        console.error('=== ERROR LIMESURVEY ===');
+        console.error(<?php echo json_encode($debug_info); ?>);
+        </script>
+        <?php
+        exit;
     }
 } else {
     $content .= '<br>No se ha configurado correctamente la API de LimeSurvey.';
 }
 
 echo $content;
+?>
+<script>
+console.log('=== DEBUG LIMESURVEY ===');
+console.log(<?php echo json_encode($debug_info); ?>);
+console.log('========================');
+</script>
