@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Version details for block_limesurvey.
+ * Cache definitions for block_limesurvey.
  *
  * @package   block_limesurvey
  * @copyright 2024, Sergio
@@ -24,8 +24,14 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'block_limesurvey';
-$plugin->version = 2025112002; // YYYYMMDDXX - Added auto cache clear on survey completion.
-$plugin->requires = 2021051700; // Requires Moodle 3.11 or higher.
-$plugin->maturity = MATURITY_BETA;
-$plugin->release = 'v2.2';
+$definitions = [
+    'surveys' => [
+        'mode' => cache_store::MODE_APPLICATION,
+        'simplekeys' => true,
+        'simpledata' => false,
+        'staticacceleration' => true,
+        'staticaccelerationsize' => 10,
+        'ttl' => 86400, // 24 hours (60 * 60 * 24).
+        'canuselocalstore' => true,
+    ],
+];

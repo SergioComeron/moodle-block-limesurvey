@@ -65,6 +65,18 @@ class get_surveys extends external_api {
         self::validate_context($context);
         require_capability('block/limesurvey:myaddinstance', $context);
 
+        // Try to get cached data first.
+        $cache = \cache::make('block_limesurvey', 'surveys');
+        $cachekey = 'user_' . $USER->id . '_surveys';
+        $cacheddata = $cache->get($cachekey);
+
+        if ($cacheddata !== false) {
+            error_log('LimeSurvey API - Using cached data for user ' . $USER->id);
+            return $cacheddata;
+        }
+
+        error_log('LimeSurvey API - Cache miss, fetching from API for user ' . $USER->id);
+
         $apiurl = get_config('block_limesurvey', 'api_url');
         $apiuser = get_config('block_limesurvey', 'api_user');
         $apipassword = get_config('block_limesurvey', 'api_password');
@@ -191,6 +203,8 @@ class get_surveys extends external_api {
                             'responseid' => $responsedata['responseid'],
                             'raw_api_response' => $responsedata['raw_api_response'],
                             'decoded_data' => $responsedata['decoded_data'],
+                            'startdate' => $survey['startdate'] ?? null,
+                            'expires' => $survey['expires'] ?? null,
                         ];
                     }
                 }
@@ -198,11 +212,17 @@ class get_surveys extends external_api {
 
             $client->release_session_key($sessionkey);
 
-            return [
+            $result = [
                 'success' => true,
                 'message' => '',
                 'surveys' => $surveys,
             ];
+
+            // Store in cache for 24 hours.
+            $cache->set($cachekey, $result);
+            error_log('LimeSurvey API - Data cached for user ' . $USER->id);
+
+            return $result;
 
         } catch (\Exception $e) {
             debugging('LimeSurvey connection error: ' . $e->getMessage(), DEBUG_DEVELOPER);
@@ -328,6 +348,8 @@ class get_surveys extends external_api {
                     'responseid' => new external_value(PARAM_INT, 'Response ID', VALUE_OPTIONAL),
                     'raw_api_response' => new external_value(PARAM_RAW, 'Raw API response for debugging', VALUE_OPTIONAL),
                     'decoded_data' => new external_value(PARAM_RAW, 'Decoded response data', VALUE_OPTIONAL),
+                    'startdate' => new external_value(PARAM_TEXT, 'Survey start date', VALUE_OPTIONAL),
+                    'expires' => new external_value(PARAM_TEXT, 'Survey expiration date', VALUE_OPTIONAL),
                 ]),
                 'List of surveys'
             ),

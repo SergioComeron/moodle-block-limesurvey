@@ -33,4 +33,12 @@ $functions = [
         'ajax'        => true,
         'loginrequired' => true,
     ],
+    'block_limesurvey_clear_cache' => [
+        'classname'   => 'block_limesurvey\external\clear_cache',
+        'methodname'  => 'execute',
+        'description' => 'Clear cache for the current user',
+        'type'        => 'write',
+        'ajax'        => true,
+        'loginrequired' => true,
+    ],
 ];

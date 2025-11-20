@@ -24,6 +24,95 @@
 define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Ajax, Notification, Str) {
 
     /**
+     * Format date string for display.
+     *
+     * @param {string} dateString Date string from LimeSurvey
+     * @return {string} Formatted date or empty string
+     */
+    var formatDate = function(dateString) {
+        if (!dateString || dateString === 'null' || dateString === null) {
+            return '';
+        }
+        try {
+            var date = new Date(dateString);
+            if (isNaN(date.getTime())) {
+                return '';
+            }
+            var options = {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            return date.toLocaleString(undefined, options);
+        } catch (e) {
+            return '';
+        }
+    };
+
+    /**
+     * Calculate days until expiration.
+     *
+     * @param {string} expiresDate Expiration date string
+     * @return {number} Days until expiration (negative if expired)
+     */
+    var getDaysUntilExpiration = function(expiresDate) {
+        if (!expiresDate || expiresDate === 'null' || expiresDate === null) {
+            return 999; // Return high number if no expiration.
+        }
+        try {
+            var expires = new Date(expiresDate);
+            var now = new Date();
+
+            // Set both dates to start of day for comparison.
+            var expiresDay = new Date(expires.getFullYear(), expires.getMonth(), expires.getDate());
+            var nowDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+            var diffTime = expiresDay - nowDay;
+            var diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+            // If expires today but time has passed, consider it as expired.
+            if (diffDays === 0 && expires < now) {
+                return -1;
+            }
+
+            return diffDays;
+        } catch (e) {
+            return 999;
+        }
+    };
+
+    /**
+     * Get urgency badge HTML based on days until expiration.
+     *
+     * @param {number} daysLeft Days until expiration
+     * @param {Object} strings Language strings
+     * @return {string} HTML for urgency badge
+     */
+    var getUrgencyBadge = function(daysLeft, strings) {
+        if (daysLeft < 0) {
+            return '<span style="background: #d32f2f; color: white; padding: 2px 8px; border-radius: 8px; ' +
+                   'font-size: 0.7em; font-weight: 600; margin-left: 8px; box-shadow: 0 0 8px rgba(211,47,47,0.5);">' +
+                   strings.expired + '</span>';
+        } else if (daysLeft === 0) {
+            return '<span class="expires-today-badge" style="background: #ff5722; color: white; padding: 2px 8px; ' +
+                   'border-radius: 8px; font-size: 0.7em; font-weight: 600; margin-left: 8px; ' +
+                   'box-shadow: 0 0 12px rgba(255,87,34,0.8);">' +
+                   strings.expirestoday + '</span>';
+        } else if (daysLeft === 1) {
+            return '<span style="background: #ff9800; color: white; padding: 2px 8px; border-radius: 8px; ' +
+                   'font-size: 0.7em; font-weight: 600; margin-left: 8px; box-shadow: 0 0 6px rgba(255,152,0,0.4);">' +
+                   strings.expiresday + '</span>';
+        } else if (daysLeft <= 7) {
+            return '<span style="background: #ffa726; color: white; padding: 2px 8px; border-radius: 8px; ' +
+                   'font-size: 0.7em; font-weight: 600; margin-left: 8px;">' +
+                   strings.expiresin.replace('{$a}', daysLeft) + '</span>';
+        }
+        return '';
+    };
+
+    /**
      * Load surveys with preloaded strings.
      *
      * @param {Object} $ jQuery object
@@ -49,13 +138,83 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                 return;
             }
 
+            // Calculate statistics.
+            var totalSurveys = response.surveys.length;
+            var completedCount = 0;
+            var pendingCount = 0;
+
+            response.surveys.forEach(function(survey) {
+                if (survey.completed) {
+                    completedCount++;
+                } else {
+                    pendingCount++;
+                }
+            });
+
+            var completionPercentage = Math.round((completedCount / totalSurveys) * 100);
+
+            // Sort surveys: pending first, ordered by expiration date (urgent first).
+            response.surveys.sort(function(a, b) {
+                // Completed surveys go last.
+                if (a.completed && !b.completed) {
+                    return 1;
+                }
+                if (!a.completed && b.completed) {
+                    return -1;
+                }
+                // Among pending surveys, sort by expiration date.
+                if (!a.completed && !b.completed) {
+                    var daysA = getDaysUntilExpiration(a.expires);
+                    var daysB = getDaysUntilExpiration(b.expires);
+                    return daysA - daysB;
+                }
+                return 0;
+            });
+
             // Log all surveys data to console for debugging.
             console.group('📊 LimeSurvey - Survey Responses');
-            console.log('Total surveys:', response.surveys.length);
+            console.log('Total surveys:', totalSurveys);
+            console.log('Completed:', completedCount);
+            console.log('Pending:', pendingCount);
+            console.log('Completion:', completionPercentage + '%');
 
-            var html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+            // Add progress indicator.
+            var html = '';
+            if (pendingCount > 0) {
+                // Compact progress bar.
+                html += '<div style="margin-bottom: 16px;">';
+                html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">';
+                html += '<span style="font-size: 0.85em; color: #666; font-weight: 500;">';
+                html += strings.surveyprogress.replace('{$a->completed}', completedCount).replace('{$a->total}', totalSurveys);
+                html += '</span>';
+                html += '<span style="font-size: 0.85em; color: #1565c0; font-weight: 600;">' + completionPercentage + '%</span>';
+                html += '</div>';
+                html += '<div style="background: #e0e0e0; height: 4px; border-radius: 2px; overflow: hidden;">';
+                html += '<div style="background: linear-gradient(90deg, #4caf50 0%, #66bb6a 100%); height: 100%; ' +
+                        'width: ' + completionPercentage + '%; transition: width 0.5s ease;"></div>';
+                html += '</div>';
+                html += '</div>';
+            } else {
+                // Success message when all completed.
+                html += '<div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); padding: 10px 14px; ' +
+                        'border-radius: 6px; margin-bottom: 16px; border-left: 3px solid #4caf50; ' +
+                        'text-align: center; font-weight: 600; color: #2e7d32; font-size: 0.9em;">';
+                html += '🎉 ' + strings.allcompleted + '</div>';
+            }
+
+            html += '<div style="display: flex; flex-direction: column; gap: 10px;">';
 
             response.surveys.forEach(function(survey, index) {
+                // Filter out expired surveys (only if they're not completed).
+                if (!survey.completed) {
+                    var daysLeft = getDaysUntilExpiration(survey.expires);
+                    if (daysLeft < 0) {
+                        // Survey expired, don't render it.
+                        console.log('⏭️ Skipping expired survey:', survey.title);
+                        return;
+                    }
+                }
+
                 var extraText = survey.attributes.length > 0 ? survey.attributes.join(', ') : '';
                 var surveyId = 'survey-' + index;
 
@@ -72,6 +231,17 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                             '<span style="margin-right: 8px;">✓</span>' + survey.title + '</div>';
                     if (extraText) {
                         html += '<div style="font-size: 0.85em; color: #558b2f;">' + extraText + '</div>';
+                    }
+                    // Add survey dates if available.
+                    if (survey.startdate || survey.expires) {
+                        html += '<div style="font-size: 0.75em; margin-top: 6px; display: flex; gap: 12px; flex-wrap: wrap;">';
+                        if (survey.startdate) {
+                            html += '<span style="color: #558b2f;"><strong>Start:</strong> ' + formatDate(survey.startdate) + '</span>';
+                        }
+                        if (survey.expires) {
+                            html += '<span style="color: #d84315;"><strong>Expires:</strong> ' + formatDate(survey.expires) + '</span>';
+                        }
+                        html += '</div>';
                     }
                     html += '</div>';
                     html += '<span style="background: #4caf50; color: white; padding: 4px 12px; ' +
@@ -94,10 +264,27 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                     html += '</div>';
                 } else {
                     // Pending survey - blue card, clickable.
-                    html += '<a href="' + survey.url + '" target="_blank" style="text-decoration: none;">';
+                    var daysLeft = getDaysUntilExpiration(survey.expires);
+                    var urgencyBadge = getUrgencyBadge(daysLeft, strings);
+
+                    // Change card color based on urgency.
+                    var cardBgGradient = 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)';
+                    var cardBorderColor = '#2196f3';
+                    if (daysLeft < 0) {
+                        cardBgGradient = 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)';
+                        cardBorderColor = '#d32f2f';
+                    } else if (daysLeft <= 1) {
+                        cardBgGradient = 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)';
+                        cardBorderColor = '#ff5722';
+                    } else if (daysLeft <= 7) {
+                        cardBgGradient = 'linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%)';
+                        cardBorderColor = '#ff9800';
+                    }
+
+                    html += '<a href="' + survey.url + '" target="_blank" class="limesurvey-link" style="text-decoration: none;">';
                     html += '<div style="padding: 12px 16px; border-radius: 8px; ' +
-                            'background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); ' +
-                            'border-left: 4px solid #2196f3; ' +
+                            'background: ' + cardBgGradient + '; ' +
+                            'border-left: 4px solid ' + cardBorderColor + '; ' +
                             'box-shadow: 0 2px 4px rgba(0,0,0,0.1); ' +
                             'transition: all 0.2s; cursor: pointer;" ' +
                             'onmouseover="this.style.boxShadow=\'0 4px 8px rgba(0,0,0,0.15)\'; ' +
@@ -107,9 +294,20 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                     html += '<div style="display: flex; align-items: center; justify-content: space-between;">';
                     html += '<div style="flex: 1;">';
                     html += '<div style="font-weight: 600; color: #1565c0; margin-bottom: 4px;">' +
-                            '<span style="margin-right: 8px;">→</span>' + survey.title + '</div>';
+                            '<span style="margin-right: 8px;">→</span>' + survey.title + urgencyBadge + '</div>';
                     if (extraText) {
                         html += '<div style="font-size: 0.85em; color: #1976d2;">' + extraText + '</div>';
+                    }
+                    // Add survey dates if available.
+                    if (survey.startdate || survey.expires) {
+                        html += '<div style="font-size: 0.75em; margin-top: 6px; display: flex; gap: 12px; flex-wrap: wrap;">';
+                        if (survey.startdate) {
+                            html += '<span style="color: #1565c0;"><strong>Start:</strong> ' + formatDate(survey.startdate) + '</span>';
+                        }
+                        if (survey.expires) {
+                            html += '<span style="color: #d84315;"><strong>Expires:</strong> ' + formatDate(survey.expires) + '</span>';
+                        }
+                        html += '</div>';
                     }
                     html += '</div>';
                     html += '<span style="background: #2196f3; color: white; padding: 4px 12px; ' +
@@ -151,6 +349,20 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
 
             html += '</div>';
             contentDiv.html(html);
+
+            // Add pulsing animation to "Expires today" badges.
+            var expiresTodayBadges = $('.expires-today-badge');
+            if (expiresTodayBadges.length > 0) {
+                setInterval(function() {
+                    expiresTodayBadges.fadeOut(600).fadeIn(600);
+                }, 1200);
+            }
+
+            // Mark when user clicks on a survey link (to clear cache on return).
+            $('.limesurvey-link').on('click', function() {
+                window.sessionStorage.setItem('limesurvey_survey_clicked', 'true');
+                console.log('📝 Survey link clicked, will clear cache on return');
+            });
 
             // Attach click handlers for view responses buttons.
             $('.view-responses').on('click', function(e) {
@@ -197,7 +409,26 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
     return {
         init: function() {
             console.log('🎯 LimeSurvey block: Initializing...');
+
+            // Check if user just completed a survey (returning from LimeSurvey).
+            if (window.sessionStorage.getItem('limesurvey_survey_clicked')) {
+                console.log('🔄 User returned from survey, clearing cache...');
+                window.sessionStorage.removeItem('limesurvey_survey_clicked');
+                this.clearCache();
+            }
+
             this.loadSurveys();
+        },
+
+        clearCache: function() {
+            Ajax.call([{
+                methodname: 'block_limesurvey_clear_cache',
+                args: {}
+            }])[0].done(function(response) {
+                console.log('✅ Cache cleared:', response);
+            }).fail(function(error) {
+                console.error('❌ Error clearing cache:', error);
+            });
         },
 
         loadSurveys: function() {
@@ -212,7 +443,13 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                 {key: 'viewresponses', component: 'block_limesurvey'},
                 {key: 'hideresponses', component: 'block_limesurvey'},
                 {key: 'responses', component: 'block_limesurvey'},
-                {key: 'error_loading', component: 'block_limesurvey'}
+                {key: 'error_loading', component: 'block_limesurvey'},
+                {key: 'surveyprogress', component: 'block_limesurvey'},
+                {key: 'allcompleted', component: 'block_limesurvey'},
+                {key: 'expiresin', component: 'block_limesurvey'},
+                {key: 'expiresday', component: 'block_limesurvey'},
+                {key: 'expirestoday', component: 'block_limesurvey'},
+                {key: 'expired', component: 'block_limesurvey'}
             ];
 
             console.log('📝 Loading language strings...');
@@ -226,7 +463,13 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                     viewresponses: loadedStrings[2],
                     hideresponses: loadedStrings[3],
                     responses: loadedStrings[4],
-                    error_loading: loadedStrings[5]
+                    error_loading: loadedStrings[5],
+                    surveyprogress: loadedStrings[6],
+                    allcompleted: loadedStrings[7],
+                    expiresin: loadedStrings[8],
+                    expiresday: loadedStrings[9],
+                    expirestoday: loadedStrings[10],
+                    expired: loadedStrings[11]
                 };
 
                 // Now load surveys with strings available.

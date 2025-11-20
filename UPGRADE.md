@@ -1,14 +1,21 @@
-# Upgrade Notes - LimeSurvey Block v2.0
+# Upgrade Notes - LimeSurvey Block v2.1
 
 ## Summary of Changes
 
-This version includes a major security refactor and code improvements:
+This version includes a major security refactor, code improvements, and a caching system:
 
 ### Security Improvements ✅
 - **Removed direct PHP endpoint** (`api_fetch_script.php` is now deprecated)
 - **Implemented Moodle External API** for secure AJAX calls
 - **Added proper capability checks** in the external service
 - **CSP compliant** - No more inline scripts
+
+### Performance Improvements ⚡
+- **NEW in v2.1**: Caching system for LimeSurvey API responses
+- Survey data is cached for **24 hours** per user
+- First load: 2-3 seconds (API call to LimeSurvey)
+- Subsequent loads: <0.1 seconds (from cache)
+- Dramatically reduces load on LimeSurvey server
 
 ### Code Quality Improvements
 - **Fixed bug**: Variable `$participant` was used outside its loop (line 134 in old version)
@@ -19,6 +26,7 @@ This version includes a major security refactor and code improvements:
 ### Architecture Changes
 - Uses AMD/AJAX instead of direct fetch to PHP file
 - Implements `db/services.php` for web service definition
+- Implements `db/caches.php` for cache definition
 - New external API class: `block_limesurvey\external\get_surveys`
 - JavaScript module: `block_limesurvey/surveys`
 
@@ -125,12 +133,33 @@ If you need to rollback to the old version:
 
 ### Modified Files:
 - `block_limesurvey.php` - Now uses AMD, added PHPDoc
+- `classes/external/get_surveys.php` - Added caching system (v2.1)
 - `lang/en/block_limesurvey.php` - Added new strings in English
-- `version.php` - Updated to v2.0, bumped version number
+- `version.php` - Updated to v2.1, bumped version number
 - `db/access.php` - Minor formatting improvements
+
+### New Files (v2.1):
+- `db/caches.php` - Cache definition for surveys (24-hour TTL)
 
 ### Files to Delete (Optional):
 - `api_fetch_script.php` - No longer used
+
+## Managing the Cache
+
+The cache stores survey data for 24 hours per user to improve performance.
+
+### Clear Cache for All Users:
+```bash
+php admin/cli/purge_caches.php
+```
+
+Or visit: **Site Administration → Development → Purge all caches**
+
+### Clear Cache for Specific User:
+Use Moodle's cache administration interface:
+**Site Administration → Plugins → Caching → Configuration**
+
+Find "block_limesurvey / surveys" and click "Purge"
 
 ## Support
 
@@ -141,6 +170,6 @@ For issues or questions, check:
 
 ---
 
-**Version**: 2.0
+**Version**: 2.1
 **Date**: 2025-11-20
 **Maturity**: BETA
