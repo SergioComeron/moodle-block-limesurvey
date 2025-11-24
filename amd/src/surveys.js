@@ -93,20 +93,22 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
     var getUrgencyBadge = function(daysLeft, strings) {
         if (daysLeft < 0) {
             return '<span style="background: #d32f2f; color: white; padding: 2px 8px; border-radius: 8px; ' +
-                   'font-size: 0.7em; font-weight: 600; margin-left: 8px; box-shadow: 0 0 8px rgba(211,47,47,0.5);">' +
+                   'font-size: 0.7em; font-weight: 600; margin-left: 8px; box-shadow: 0 0 8px rgba(211,47,47,0.5); ' +
+                   'white-space: nowrap;">' +
                    strings.expired + '</span>';
         } else if (daysLeft === 0) {
             return '<span class="expires-today-badge" style="background: #ff5722; color: white; padding: 2px 8px; ' +
                    'border-radius: 8px; font-size: 0.7em; font-weight: 600; margin-left: 8px; ' +
-                   'box-shadow: 0 0 12px rgba(255,87,34,0.8);">' +
+                   'box-shadow: 0 0 12px rgba(255,87,34,0.8); white-space: nowrap;">' +
                    strings.expirestoday + '</span>';
         } else if (daysLeft === 1) {
             return '<span style="background: #ff9800; color: white; padding: 2px 8px; border-radius: 8px; ' +
-                   'font-size: 0.7em; font-weight: 600; margin-left: 8px; box-shadow: 0 0 6px rgba(255,152,0,0.4);">' +
+                   'font-size: 0.7em; font-weight: 600; margin-left: 8px; box-shadow: 0 0 6px rgba(255,152,0,0.4); ' +
+                   'white-space: nowrap;">' +
                    strings.expiresday + '</span>';
         } else if (daysLeft <= 7) {
             return '<span style="background: #ffa726; color: white; padding: 2px 8px; border-radius: 8px; ' +
-                   'font-size: 0.7em; font-weight: 600; margin-left: 8px;">' +
+                   'font-size: 0.7em; font-weight: 600; margin-left: 8px; white-space: nowrap;">' +
                    strings.expiresin.replace('{$a}', daysLeft) + '</span>';
         }
         return '';
