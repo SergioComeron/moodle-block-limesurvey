@@ -41,6 +41,18 @@ require_once($CFG->dirroot . '/blocks/limesurvey/jsonrpcphp-master/src/org/jsonr
 class get_surveys extends external_api {
 
     /**
+     * Log a debug message if debug logging is enabled.
+     *
+     * @param string $message The message to log
+     */
+    private static function debug_log($message) {
+        $debugenabled = get_config('block_limesurvey', 'debug_logging');
+        if ($debugenabled) {
+            error_log($message);
+        }
+    }
+
+    /**
      * Returns description of method parameters.
      *
      * @return external_function_parameters
@@ -71,11 +83,13 @@ class get_surveys extends external_api {
         $cacheddata = $cache->get($cachekey);
 
         if ($cacheddata !== false) {
-            error_log('LimeSurvey API - Using cached data for user ' . $USER->id);
+            self::debug_log('LimeSurvey API - Using cached data for user ' . $USER->id);
+            // Add cache timestamp for debugging.
+            $cacheddata['_cached_at'] = $cacheddata['_cached_at'] ?? 'unknown';
             return $cacheddata;
         }
 
-        error_log('LimeSurvey API - Cache miss, fetching from API for user ' . $USER->id);
+        self::debug_log('LimeSurvey API - Cache miss, fetching from API for user ' . $USER->id);
 
         $apiurl = get_config('block_limesurvey', 'api_url');
         $apiuser = get_config('block_limesurvey', 'api_user');
@@ -110,41 +124,42 @@ class get_surveys extends external_api {
             $surveys = [];
 
             // Debug: Log all surveys from LimeSurvey.
-            error_log('LimeSurvey API - list_surveys response: ' . json_encode($response));
-            error_log('LimeSurvey API - User email: ' . $USER->email);
+            self::debug_log('LimeSurvey API - list_surveys response: ' . json_encode($response));
+            self::debug_log('LimeSurvey API - User email: ' . $USER->email);
 
             if (is_array($response) && !empty($response) && isset($response[0]['sid'])) {
                 $currentdate = time();
                 $atributosconfig = get_config('block_limesurvey', 'atributosextra');
                 $atributosarray = array_map('trim', explode(',', $atributosconfig));
 
-                error_log('LimeSurvey API - Total surveys found: ' . count($response));
-                error_log('LimeSurvey API - Current date: ' . date('Y-m-d H:i:s', $currentdate));
+                self::debug_log('LimeSurvey API - Total surveys found: ' . count($response));
+                self::debug_log('LimeSurvey API - Current date: ' . date('Y-m-d H:i:s', $currentdate));
 
                 foreach ($response as $survey) {
                     // Validate survey data.
                     if (!is_array($survey) || !isset($survey['active'], $survey['sid'])) {
-                        error_log('LimeSurvey API - Skipping survey (invalid data): ' . json_encode($survey));
+                        self::debug_log('LimeSurvey API - Skipping survey (invalid data): ' . json_encode($survey));
                         continue;
                     }
 
-                    error_log('LimeSurvey API - Processing survey: ' . $survey['sid'] . ' - ' . ($survey['surveyls_title'] ?? 'No title'));
-                    error_log('LimeSurvey API - Survey active: ' . $survey['active']);
-                    error_log('LimeSurvey API - Survey dates: start=' . ($survey['startdate'] ?? 'null') . ', expires=' . ($survey['expires'] ?? 'null'));
+                    self::debug_log('LimeSurvey API - Processing survey: ' . $survey['sid'] . ' - ' . ($survey['surveyls_title'] ?? 'No title'));
+                    self::debug_log('LimeSurvey API - Survey active: ' . $survey['active']);
+                    self::debug_log('LimeSurvey API - Survey dates: start=' . ($survey['startdate'] ?? 'null') . ', expires=' . ($survey['expires'] ?? 'null'));
+                    self::debug_log('LimeSurvey API - ALL survey fields: ' . json_encode($survey));
 
                     // Check if survey is active and within date range.
                     if ($survey['active'] !== 'Y') {
-                        error_log('LimeSurvey API - Survey ' . $survey['sid'] . ' is not active');
+                        self::debug_log('LimeSurvey API - Survey ' . $survey['sid'] . ' is not active');
                         continue;
                     }
 
                     if (!empty($survey['startdate']) && strtotime($survey['startdate']) > $currentdate) {
-                        error_log('LimeSurvey API - Survey ' . $survey['sid'] . ' has not started yet');
+                        self::debug_log('LimeSurvey API - Survey ' . $survey['sid'] . ' has not started yet');
                         continue;
                     }
 
                     if (!empty($survey['expires']) && strtotime($survey['expires']) <= $currentdate) {
-                        error_log('LimeSurvey API - Survey ' . $survey['sid'] . ' has expired');
+                        self::debug_log('LimeSurvey API - Survey ' . $survey['sid'] . ' has expired');
                         continue;
                     }
 
@@ -159,14 +174,14 @@ class get_surveys extends external_api {
                         ['email' => $USER->email]
                     );
 
-                    error_log('LimeSurvey API - Participants response for survey ' . $survey['sid'] . ': ' . json_encode($participants));
+                    self::debug_log('LimeSurvey API - Participants response for survey ' . $survey['sid'] . ': ' . json_encode($participants));
 
                     if (!is_array($participants) || empty($participants)) {
-                        error_log('LimeSurvey API - No participants found for survey ' . $survey['sid']);
+                        self::debug_log('LimeSurvey API - No participants found for survey ' . $survey['sid']);
                         continue;
                     }
 
-                    error_log('LimeSurvey API - Found ' . count($participants) . ' participants for survey ' . $survey['sid']);
+                    self::debug_log('LimeSurvey API - Found ' . count($participants) . ' participants for survey ' . $survey['sid']);
 
                     // Process each participant.
                     foreach ($participants as $participant) {
@@ -176,6 +191,9 @@ class get_surveys extends external_api {
                         }
 
                         $token = $participant['token'];
+
+                        // Debug: Log all participant fields to see what's available.
+                        self::debug_log('LimeSurvey API - Participant data for survey ' . $survey['sid'] . ': ' . json_encode($participant));
 
                         // Check if user has responded and get response data.
                         $responsedata = self::get_survey_response($client, $sessionkey, $survey['sid'], $token);
@@ -194,10 +212,14 @@ class get_surveys extends external_api {
                             }
                         }
 
+                        self::debug_log('LimeSurvey API - Adding survey to results: ' . $survey['surveyls_title'] .
+                                  ', completed=' . ($responsedata['completed'] ? 'true' : 'false'));
+
                         $surveys[] = [
                             'title' => $survey['surveyls_title'],
                             'url' => $surveyurl,
                             'completed' => $responsedata['completed'],
+                            'completion_percentage' => $responsedata['completion_percentage'] ?? 0,
                             'attributes' => $extraattributes,
                             'responses' => $responsedata['responses'],
                             'responseid' => $responsedata['responseid'],
@@ -216,11 +238,12 @@ class get_surveys extends external_api {
                 'success' => true,
                 'message' => '',
                 'surveys' => $surveys,
+                '_cached_at' => date('Y-m-d H:i:s'),
             ];
 
             // Store in cache for 24 hours.
             $cache->set($cachekey, $result);
-            error_log('LimeSurvey API - Data cached for user ' . $USER->id);
+            self::debug_log('LimeSurvey API - Data cached for user ' . $USER->id . ' at ' . date('Y-m-d H:i:s'));
 
             return $result;
 
@@ -275,7 +298,6 @@ class get_surveys extends external_api {
                 $decoded = base64_decode($responsesbytoken, true);
 
                 if ($decoded !== false && $decoded !== '') {
-                    $result['completed'] = true;
                     $result['decoded_data'] = $decoded;
 
                     // Parse JSON responses.
@@ -292,11 +314,69 @@ class get_surveys extends external_api {
                                 // Store response ID if available.
                                 $result['responseid'] = $firstresponse['id'] ?? $firstresponse['response_id'] ?? null;
 
-                                // Filter and format responses (exclude metadata).
+                                // Debug: Log first response to see field names.
+                                self::debug_log('LimeSurvey API - First response data: ' . json_encode($firstresponse));
+
+                                // Get submitdate and lastpage to determine completion.
+                                $submitdate = $firstresponse['submitdate'] ?? $firstresponse['Fecha de envío'] ?? null;
+                                $lastpage = $firstresponse['lastpage'] ?? $firstresponse['Última página'] ?? '0';
+
+                                // Calculate completion percentage based on answered questions.
+                                $totalquestions = 0;
+                                $answeredquestions = 0;
+                                $technicalfields = ['id', 'token', 'submitdate', 'lastpage', 'startlanguage',
+                                                    'seed', 'startdate', 'datestamp', 'ipaddr', 'refurl',
+                                                    'ID de respuesta', 'Fecha de envío', 'Última página',
+                                                    'Lenguaje inicial', 'Semilla', 'Código de acceso',
+                                                    'Fecha de inicio', 'Fecha de la últ.. ', 'Dirección IP',
+                                                    'Fecha de la última respuesta', 'Fecha de la última página'];
+
+                                // Log all field names to understand the format.
+                                self::debug_log('LimeSurvey API - All response field names: ' . implode(', ', array_keys($firstresponse)));
+
+                                // Count only fields with actual data (non-null).
+                                // Null fields are either optional questions not answered or conditional questions that didn't apply.
+                                // We only count fields that have actual data (even if empty string) as part of the survey.
                                 foreach ($firstresponse as $key => $value) {
                                     // Skip technical fields.
+                                    if (in_array($key, $technicalfields)) {
+                                        continue;
+                                    }
+                                    // Skip duplicate fields with survey codes like "(328717X4047X79021SQ002)".
+                                    // These are internal codes for subquestions already counted in main questions.
+                                    if (preg_match('/\(\d+X\d+X\d+.*?\)/', $key)) {
+                                        continue;
+                                    }
+                                    // Only count non-null fields as part of the survey.
+                                    // Null fields are conditional/optional questions that don't apply.
+                                    if ($value !== null) {
+                                        $totalquestions++;
+                                        // Count as answered if not empty string.
+                                        if ($value !== '') {
+                                            $answeredquestions++;
+                                        }
+                                    }
+                                }
+
+                                $completionpercentage = 0;
+                                if ($totalquestions > 0) {
+                                    $completionpercentage = round(($answeredquestions / $totalquestions) * 100);
+                                }
+                                self::debug_log('LimeSurvey API - Survey progress: ' . $completionpercentage . '% (answered: ' .
+                                          $answeredquestions . '/' . $totalquestions . ', lastpage: ' . $lastpage . ')');
+
+                                // Never mark as completed - users should always be able to edit their responses
+                                // until the survey expires. We only show completion percentage.
+                                $result['completed'] = false;
+                                $result['completion_percentage'] = $completionpercentage;
+
+                                // Filter and format responses (exclude metadata).
+                                foreach ($firstresponse as $key => $value) {
+                                    // Skip technical fields (in English and Spanish).
                                     if (in_array($key, ['id', 'token', 'submitdate', 'lastpage', 'startlanguage',
-                                                        'seed', 'startdate', 'datestamp', 'ipaddr', 'refurl'])) {
+                                                        'seed', 'startdate', 'datestamp', 'ipaddr', 'refurl',
+                                                        'ID de respuesta', 'Fecha de envío', 'Última página',
+                                                        'Lenguaje inicial', 'Semilla', 'Código de acceso'])) {
                                         continue;
                                     }
 
@@ -339,6 +419,7 @@ class get_surveys extends external_api {
                     'title' => new external_value(PARAM_TEXT, 'Survey title'),
                     'url' => new external_value(PARAM_URL, 'Survey URL'),
                     'completed' => new external_value(PARAM_BOOL, 'Whether user has completed the survey'),
+                    'completion_percentage' => new external_value(PARAM_INT, 'Survey completion percentage (0-100)', VALUE_OPTIONAL),
                     'attributes' => new external_multiple_structure(
                         new external_value(PARAM_TEXT, 'Extra attribute value'),
                         'Extra attributes',
@@ -353,6 +434,7 @@ class get_surveys extends external_api {
                 ]),
                 'List of surveys'
             ),
+            '_cached_at' => new external_value(PARAM_TEXT, 'Cache timestamp', VALUE_OPTIONAL),
         ]);
     }
 }

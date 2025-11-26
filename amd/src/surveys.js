@@ -144,6 +144,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
             var totalSurveys = response.surveys.length;
             var completedCount = 0;
             var pendingCount = 0;
+            var totalCompletionPercentage = 0;
 
             response.surveys.forEach(function(survey) {
                 if (survey.completed) {
@@ -151,9 +152,12 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                 } else {
                     pendingCount++;
                 }
+                // Add this survey's completion percentage to the total.
+                totalCompletionPercentage += (survey.completion_percentage || 0);
             });
 
-            var completionPercentage = Math.round((completedCount / totalSurveys) * 100);
+            // Calculate average completion percentage across all surveys.
+            var completionPercentage = totalSurveys > 0 ? Math.round(totalCompletionPercentage / totalSurveys) : 0;
 
             // Sort surveys: pending first, ordered by expiration date (urgent first).
             response.surveys.sort(function(a, b) {
@@ -183,12 +187,9 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
             // Add progress indicator.
             var html = '';
             if (pendingCount > 0) {
-                // Compact progress bar.
+                // Compact progress bar - only showing percentage.
                 html += '<div style="margin-bottom: 16px;">';
-                html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">';
-                html += '<span style="font-size: 0.85em; color: #666; font-weight: 500;">';
-                html += strings.surveyprogress.replace('{$a->completed}', completedCount).replace('{$a->total}', totalSurveys);
-                html += '</span>';
+                html += '<div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 6px;">';
                 html += '<span style="font-size: 0.85em; color: #1565c0; font-weight: 600;">' + completionPercentage + '%</span>';
                 html += '</div>';
                 html += '<div style="background: #e0e0e0; height: 4px; border-radius: 2px; overflow: hidden;">';
@@ -269,10 +270,21 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                     var daysLeft = getDaysUntilExpiration(survey.expires);
                     var urgencyBadge = getUrgencyBadge(daysLeft, strings);
 
-                    // Change card color based on urgency.
+                    // Change card color based on completion or urgency.
                     var cardBgGradient = 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)';
                     var cardBorderColor = '#2196f3';
-                    if (daysLeft < 0) {
+                    var titleColor = '#1565c0';
+                    var extraTextColor = '#1976d2';
+                    var dateColor = '#1565c0';
+
+                    // If survey is 100% complete, use green styling.
+                    if (survey.completion_percentage === 100) {
+                        cardBgGradient = 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)';
+                        cardBorderColor = '#4caf50';
+                        titleColor = '#2e7d32';
+                        extraTextColor = '#558b2f';
+                        dateColor = '#558b2f';
+                    } else if (daysLeft < 0) {
                         cardBgGradient = 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)';
                         cardBorderColor = '#d32f2f';
                     } else if (daysLeft <= 1) {
@@ -295,16 +307,16 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                             'this.style.transform=\'translateY(0)\';">';
                     html += '<div style="display: flex; align-items: center; justify-content: space-between;">';
                     html += '<div style="flex: 1;">';
-                    html += '<div style="font-weight: 600; color: #1565c0; margin-bottom: 4px;">' +
+                    html += '<div style="font-weight: 600; color: ' + titleColor + '; margin-bottom: 4px;">' +
                             '<span style="margin-right: 8px;">→</span>' + survey.title + urgencyBadge + '</div>';
                     if (extraText) {
-                        html += '<div style="font-size: 0.85em; color: #1976d2;">' + extraText + '</div>';
+                        html += '<div style="font-size: 0.85em; color: ' + extraTextColor + ';">' + extraText + '</div>';
                     }
                     // Add survey dates if available.
                     if (survey.startdate || survey.expires) {
                         html += '<div style="font-size: 0.75em; margin-top: 6px; display: flex; gap: 12px; flex-wrap: wrap;">';
                         if (survey.startdate) {
-                            html += '<span style="color: #1565c0;"><strong>Start:</strong> ' + formatDate(survey.startdate) + '</span>';
+                            html += '<span style="color: ' + dateColor + ';"><strong>Start:</strong> ' + formatDate(survey.startdate) + '</span>';
                         }
                         if (survey.expires) {
                             html += '<span style="color: #d84315;"><strong>Expires:</strong> ' + formatDate(survey.expires) + '</span>';
@@ -312,9 +324,25 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                         html += '</div>';
                     }
                     html += '</div>';
-                    html += '<span style="background: #2196f3; color: white; padding: 4px 12px; ' +
-                            'border-radius: 12px; font-size: 0.75em; font-weight: 600; ' +
-                            'text-transform: uppercase; letter-spacing: 0.5px;">Pending</span>';
+                    // Circular progress indicator.
+                    var percentage = survey.completion_percentage || 0;
+                    var circumference = 2 * Math.PI * 18; // radius = 18
+                    var offset = circumference - (percentage / 100) * circumference;
+                    var progressColor = percentage < 30 ? '#f44336' : (percentage < 70 ? '#ff9800' : '#4caf50');
+
+                    html += '<div style="position: relative; width: 48px; height: 48px;">';
+                    html += '<svg width="48" height="48" style="transform: rotate(-90deg);">';
+                    html += '<circle cx="24" cy="24" r="18" fill="none" stroke="#e0e0e0" stroke-width="4"></circle>';
+                    html += '<circle cx="24" cy="24" r="18" fill="none" stroke="' + progressColor + '" ' +
+                            'stroke-width="4" stroke-dasharray="' + circumference + '" ' +
+                            'stroke-dashoffset="' + offset + '" ' +
+                            'stroke-linecap="round" ' +
+                            'style="transition: stroke-dashoffset 0.5s ease;"></circle>';
+                    html += '</svg>';
+                    html += '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); ' +
+                            'font-size: 0.7em; font-weight: 700; color: ' + progressColor + ';">' +
+                            percentage + '%</div>';
+                    html += '</div>';
                     html += '</div>';
                     html += '</div>';
                     html += '</a>';
@@ -360,12 +388,6 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                 }, 1200);
             }
 
-            // Mark when user clicks on a survey link (to clear cache on return).
-            $('.limesurvey-link').on('click', function() {
-                window.sessionStorage.setItem('limesurvey_survey_clicked', 'true');
-                console.log('📝 Survey link clicked, will clear cache on return');
-            });
-
             // Attach click handlers for view responses buttons.
             $('.view-responses').on('click', function(e) {
                 e.preventDefault();
@@ -401,6 +423,19 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                 }
             });
 
+            // Clear cache when user clicks on a survey link.
+            $('.limesurvey-link').on('click', function() {
+                console.log('🗑️ User clicked on survey, clearing cache...');
+                Ajax.call([{
+                    methodname: 'block_limesurvey_clear_cache',
+                    args: {}
+                }])[0].done(function(clearResponse) {
+                    console.log('✅ Cache cleared:', clearResponse);
+                }).fail(function(error) {
+                    console.error('❌ Error clearing cache:', error);
+                });
+            });
+
         }).fail(function(error) {
             contentDiv.html('<div class="alert alert-danger">' + strings.error_loading + '</div>');
             Notification.exception(error);
@@ -411,14 +446,6 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
     return {
         init: function() {
             console.log('🎯 LimeSurvey block: Initializing...');
-
-            // Check if user just completed a survey (returning from LimeSurvey).
-            if (window.sessionStorage.getItem('limesurvey_survey_clicked')) {
-                console.log('🔄 User returned from survey, clearing cache...');
-                window.sessionStorage.removeItem('limesurvey_survey_clicked');
-                this.clearCache();
-            }
-
             this.loadSurveys();
         },
 

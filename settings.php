@@ -67,4 +67,21 @@ if ($ADMIN->fulltree) {
         '', // Valor predeterminado (puedes poner "atributo1,atributo2" si lo prefieres)
         PARAM_TEXT // Tipo de dato (texto)
     ));
+
+    // Campo de configuración para habilitar debug logging.
+    $settings->add(new admin_setting_configcheckbox(
+        'block_limesurvey/debug_logging',
+        get_string('debug_logging', 'block_limesurvey'),
+        get_string('debug_logging_desc', 'block_limesurvey'),
+        0 // Valor por defecto: desactivado
+    ));
+
+    // Campo de configuración para el nombre personalizado del bloque.
+    $settings->add(new admin_setting_configtext(
+        'block_limesurvey/block_title',
+        get_string('block_title', 'block_limesurvey'),
+        get_string('block_title_desc', 'block_limesurvey'),
+        '', // Valor por defecto: vacío (usa el nombre por defecto)
+        PARAM_TEXT
+    ));
 }
