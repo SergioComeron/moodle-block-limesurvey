@@ -73,7 +73,7 @@ class block_limesurvey extends block_base {
     public function applicable_formats() {
         return [
             'admin' => false,
-            'site-index' => false,
+            'site-index' => true,
             'course-view' => false,
             'mod' => false,
             'my' => true,
