@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $string['activesurveys'] = 'Encuestas activas:';
-$string['allcompleted'] = '¡Genial! Has completado todas las encuestas';
+$string['allcompleted'] = '¡Genial! Has enviado todas las encuestas';
 $string['api_password'] = 'Contraseña de API';
 $string['api_password_desc'] = 'Contraseña para conectarse a la API de LimeSurvey.';
 $string['api_token'] = 'Token de API de LimeSurvey';
@@ -39,7 +39,7 @@ $string['atributosextra_desc'] = 'Opcional. Ingrese números de atributos separa
 $string['block_title'] = 'Título personalizado del bloque';
 $string['block_title_desc'] = 'Título personalizado para el bloque. Déjelo vacío para usar el nombre por defecto del bloque.';
 $string['cachedef_surveys'] = 'Datos de encuestas de LimeSurvey para usuarios';
-$string['completed'] = 'Encuesta completada';
+$string['completed'] = 'Encuesta enviada';
 $string['debug_logging'] = 'Activar registro de depuración';
 $string['debug_logging_desc'] = 'Activar registro detallado para propósitos de depuración. Cuando está desactivado, solo se registrarán los errores.';
 $string['error_config'] = 'Por favor configure el bloque LimeSurvey en la administración del sitio.';
@@ -59,7 +59,7 @@ $string['nosurveys'] = 'No tienes encuestas activas.';
 $string['pending'] = 'Encuesta pendiente';
 $string['pluginname'] = 'Bloque LimeSurvey';
 $string['responses'] = 'Respuestas';
-$string['surveyprogress'] = 'Progreso de encuestas: {$a->completed} de {$a->total} completadas';
+$string['surveyprogress'] = 'Progreso de encuestas: {$a->completed} de {$a->total} enviadas';
 $string['viewresponses'] = 'Ver respuestas';
 $string['survey_title_format'] = 'Formato del título de encuestas';
 $string['survey_title_format_desc'] = 'Formato personalizado para los títulos de encuestas usando marcadores de posición. Marcadores disponibles: {title} (título original de la encuesta), {attribute_N} (donde N es el número de atributo, ej., {attribute_9}, {attribute_12}). Déjelo vacío para usar los títulos originales. Ejemplo: "{title} - Curso: {attribute_12} - Profesor: {attribute_9}"';
@@ -68,8 +68,8 @@ $string['survey_title_formats_by_id_desc'] = 'Formatos de título personalizados
 $string['startdate'] = 'Inicio';
 $string['expiresdate'] = 'Expira';
 $string['surveylist'] = 'Lista de encuestas';
-$string['completedsurvey_aria'] = 'Encuesta completada: {$a}';
+$string['completedsurvey_aria'] = 'Encuesta enviada: {$a}';
 $string['pendingsurvey_aria'] = 'Encuesta pendiente: {$a}. Se abre en ventana nueva';
 $string['progress_aria'] = 'Progreso de la encuesta: {$a} por ciento';
-$string['completedstatus'] = 'Completada';
+$string['completedstatus'] = 'Enviada';
 $string['pendingstatus'] = 'Pendiente';

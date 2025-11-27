@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'block_limesurvey';
-$plugin->version = 2025112707; // YYYYMMDDXX - Keep completed surveys clickable.
+$plugin->version = 2025112709; // YYYYMMDDXX - Changed all "completada" to "enviada" in Spanish.
 $plugin->requires = 2021051700; // Requires Moodle 3.11 or higher.
 $plugin->maturity = MATURITY_BETA;
-$plugin->release = 'v2.23';
+$plugin->release = 'v2.25';
