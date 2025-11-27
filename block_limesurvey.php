@@ -33,12 +33,17 @@ class block_limesurvey extends block_base {
      * Initialize block.
      */
     public function init() {
-        // Get custom block title from config, or use default.
+        $this->title = get_string('pluginname', 'block_limesurvey');
+    }
+
+    /**
+     * Specialization (called after instance is loaded).
+     */
+    public function specialization() {
+        // Get custom block title from config if set.
         $customtitle = get_config('block_limesurvey', 'block_title');
         if (!empty($customtitle)) {
             $this->title = format_string($customtitle);
-        } else {
-            $this->title = get_string('pluginname', 'block_limesurvey');
         }
     }
 
