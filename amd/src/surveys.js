@@ -197,15 +197,9 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                         'width: ' + completionPercentage + '%; transition: width 0.5s ease;"></div>';
                 html += '</div>';
                 html += '</div>';
-            } else {
-                // Success message when all completed.
-                html += '<div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); padding: 10px 14px; ' +
-                        'border-radius: 6px; margin-bottom: 16px; border-left: 3px solid #4caf50; ' +
-                        'text-align: center; font-weight: 600; color: #2e7d32; font-size: 0.9em;">';
-                html += '🎉 ' + strings.allcompleted + '</div>';
             }
 
-            html += '<ul role="list" aria-label="' + strings.surveylist + '" style="display: flex; flex-direction: column; gap: 10px; list-style: none; padding: 0; margin: 0;">';
+            html += '<ul role="list" aria-label="' + strings.surveylist + '" id="survey-list" style="display: flex; flex-direction: column; gap: 10px; list-style: none; padding: 0; margin: 0;">';
 
             response.surveys.forEach(function(survey, index) {
                 // Filter out expired surveys (only if they're not completed).
