@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'block_limesurvey';
-$plugin->version = 2025112717; // YYYYMMDDXX - Removed all completed message.
+$plugin->version = 2025112718; // YYYYMMDDXX - Progress bar now based on submitted surveys count.
 $plugin->requires = 2021051700; // Requires Moodle 3.11 or higher.
 $plugin->maturity = MATURITY_BETA;
-$plugin->release = 'v2.33';
+$plugin->release = 'v2.34';

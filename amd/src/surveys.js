@@ -144,7 +144,6 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
             var totalSurveys = response.surveys.length;
             var completedCount = 0;
             var pendingCount = 0;
-            var totalCompletionPercentage = 0;
 
             response.surveys.forEach(function(survey) {
                 if (survey.completed) {
@@ -152,12 +151,10 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                 } else {
                     pendingCount++;
                 }
-                // Add this survey's completion percentage to the total.
-                totalCompletionPercentage += (survey.completion_percentage || 0);
             });
 
-            // Calculate average completion percentage across all surveys.
-            var completionPercentage = totalSurveys > 0 ? Math.round(totalCompletionPercentage / totalSurveys) : 0;
+            // Calculate percentage of submitted surveys.
+            var completionPercentage = totalSurveys > 0 ? Math.round((completedCount / totalSurveys) * 100) : 0;
 
             // Sort surveys: pending first, ordered by expiration date (urgent first).
             response.surveys.sort(function(a, b) {
