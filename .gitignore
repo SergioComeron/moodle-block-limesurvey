@@ -1,0 +1,26 @@
+# Development and testing files
+test_api.php
+api_fetch_script.php
+*_test.php
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+
+# Node modules (if any)
+node_modules/
+
+# Composer vendor (if any)
+vendor/

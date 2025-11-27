@@ -239,10 +239,10 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                     if (survey.startdate || survey.expires) {
                         html += '<div style="font-size: 0.75em; margin-top: 6px; display: flex; gap: 12px; flex-wrap: wrap;">';
                         if (survey.startdate) {
-                            html += '<span style="color: #558b2f;"><strong>Start:</strong> ' + formatDate(survey.startdate) + '</span>';
+                            html += '<span style="color: #558b2f;"><strong>' + strings.startdate + ':</strong> ' + formatDate(survey.startdate) + '</span>';
                         }
                         if (survey.expires) {
-                            html += '<span style="color: #d84315;"><strong>Expires:</strong> ' + formatDate(survey.expires) + '</span>';
+                            html += '<span style="color: #d84315;"><strong>' + strings.expiresdate + ':</strong> ' + formatDate(survey.expires) + '</span>';
                         }
                         html += '</div>';
                     }
@@ -316,10 +316,10 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                     if (survey.startdate || survey.expires) {
                         html += '<div style="font-size: 0.75em; margin-top: 6px; display: flex; gap: 12px; flex-wrap: wrap;">';
                         if (survey.startdate) {
-                            html += '<span style="color: ' + dateColor + ';"><strong>Start:</strong> ' + formatDate(survey.startdate) + '</span>';
+                            html += '<span style="color: ' + dateColor + ';"><strong>' + strings.startdate + ':</strong> ' + formatDate(survey.startdate) + '</span>';
                         }
                         if (survey.expires) {
-                            html += '<span style="color: #d84315;"><strong>Expires:</strong> ' + formatDate(survey.expires) + '</span>';
+                            html += '<span style="color: #d84315;"><strong>' + strings.expiresdate + ':</strong> ' + formatDate(survey.expires) + '</span>';
                         }
                         html += '</div>';
                     }
@@ -478,7 +478,9 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                 {key: 'expiresin', component: 'block_limesurvey'},
                 {key: 'expiresday', component: 'block_limesurvey'},
                 {key: 'expirestoday', component: 'block_limesurvey'},
-                {key: 'expired', component: 'block_limesurvey'}
+                {key: 'expired', component: 'block_limesurvey'},
+                {key: 'startdate', component: 'block_limesurvey'},
+                {key: 'expiresdate', component: 'block_limesurvey'}
             ];
 
             console.log('📝 Loading language strings...');
@@ -498,7 +500,9 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                     expiresin: loadedStrings[8],
                     expiresday: loadedStrings[9],
                     expirestoday: loadedStrings[10],
-                    expired: loadedStrings[11]
+                    expired: loadedStrings[11],
+                    startdate: loadedStrings[12],
+                    expiresdate: loadedStrings[13]
                 };
 
                 // Now load surveys with strings available.
