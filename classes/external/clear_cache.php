@@ -39,6 +39,18 @@ require_once($CFG->libdir . '/externallib.php');
 class clear_cache extends external_api {
 
     /**
+     * Log debug messages if debug logging is enabled.
+     *
+     * @param string $message Message to log
+     */
+    private static function debug_log($message) {
+        $debugenabled = get_config('block_limesurvey', 'debug_logging');
+        if ($debugenabled) {
+            error_log($message);
+        }
+    }
+
+    /**
      * Returns description of method parameters.
      *
      * @return external_function_parameters
@@ -68,7 +80,7 @@ class clear_cache extends external_api {
         $cachekey = 'user_' . $USER->id . '_surveys';
         $cache->delete($cachekey);
 
-        error_log('LimeSurvey API - Cache cleared for user ' . $USER->id);
+        self::debug_log('LimeSurvey API - Cache cleared for user ' . $USER->id);
 
         return [
             'success' => true,
