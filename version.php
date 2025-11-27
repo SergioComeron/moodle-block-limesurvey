@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'block_limesurvey';
-$plugin->version = 2025112703; // YYYYMMDDXX - Fixed block title initialization.
+$plugin->version = 2025112704; // YYYYMMDDXX - Added accessibility improvements.
 $plugin->requires = 2021051700; // Requires Moodle 3.11 or higher.
 $plugin->maturity = MATURITY_BETA;
-$plugin->release = 'v2.19';
+$plugin->release = 'v2.20';

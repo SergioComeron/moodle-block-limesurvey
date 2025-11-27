@@ -205,7 +205,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                 html += '🎉 ' + strings.allcompleted + '</div>';
             }
 
-            html += '<div style="display: flex; flex-direction: column; gap: 10px;">';
+            html += '<ul role="list" aria-label="' + strings.surveylist + '" style="display: flex; flex-direction: column; gap: 10px; list-style: none; padding: 0; margin: 0;">';
 
             response.surveys.forEach(function(survey, index) {
                 // Filter out expired surveys (only if they're not completed).
@@ -224,14 +224,15 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                 // Card-style design for each survey.
                 if (survey.completed) {
                     // Completed survey - gray card, not clickable.
-                    html += '<div style="padding: 12px 16px; border-radius: 8px; ' +
+                    var ariaLabelCompleted = strings.completedsurvey_aria.replace('{$a}', survey.title);
+                    html += '<li role="listitem" aria-label="' + ariaLabelCompleted + '" style="padding: 12px 16px; border-radius: 8px; ' +
                             'background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); ' +
                             'border-left: 4px solid #4caf50; ' +
                             'box-shadow: 0 2px 4px rgba(0,0,0,0.1);">';
                     html += '<div style="display: flex; align-items: center; justify-content: space-between;">';
                     html += '<div style="flex: 1;">';
                     html += '<div style="font-weight: 600; color: #2e7d32; margin-bottom: 4px;">' +
-                            '<span style="margin-right: 8px;">✓</span>' + survey.title + '</div>';
+                            '<span aria-hidden="true" style="margin-right: 8px;">✓</span>' + survey.title + '</div>';
                     if (extraText) {
                         html += '<div style="font-size: 0.85em; color: #558b2f;">' + extraText + '</div>';
                     }
@@ -247,24 +248,25 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                         html += '</div>';
                     }
                     html += '</div>';
-                    html += '<span style="background: #4caf50; color: white; padding: 4px 12px; ' +
+                    html += '<span aria-label="' + strings.completedstatus + '" style="background: #4caf50; color: white; padding: 4px 12px; ' +
                             'border-radius: 12px; font-size: 0.75em; font-weight: 600; ' +
-                            'text-transform: uppercase; letter-spacing: 0.5px;">Completed</span>';
+                            'text-transform: uppercase; letter-spacing: 0.5px;">' + strings.completedstatus + '</span>';
                     html += '</div>';
 
                     // Add view responses button if completed and has responses.
                     if (Object.keys(survey.responses).length > 0) {
                         html += '<button class="btn btn-sm view-responses" data-survey-id="' +
-                                surveyId + '" style="margin-top: 8px; padding: 6px 12px; ' +
+                                surveyId + '" aria-label="' + strings.viewresponses + ' ' + survey.title + '" style="margin-top: 8px; padding: 6px 12px; ' +
                                 'background: white; border: 1px solid #4caf50; color: #4caf50; ' +
                                 'border-radius: 4px; font-size: 0.85em; cursor: pointer; ' +
                                 'transition: all 0.2s;">' +
-                                '📊 ' + strings.viewresponses + '</button>';
+                                '<span aria-hidden="true">📊 </span>' + strings.viewresponses + '</button>';
                         html += '<div id="' + surveyId + '-responses" class="survey-responses" ' +
                                 'style="display: none; margin-top: 8px; padding: 12px; ' +
-                                'background: white; border-radius: 4px; border: 1px solid #c8e6c9;"></div>';
+                                'background: white; border-radius: 4px; border: 1px solid #c8e6c9;" role="region" ' +
+                                'aria-label="' + strings.responses + ' ' + survey.title + '"></div>';
                     }
-                    html += '</div>';
+                    html += '</li>';
                 } else {
                     // Pending survey - blue card, clickable.
                     var daysLeft = getDaysUntilExpiration(survey.expires);
@@ -295,7 +297,10 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                         cardBorderColor = '#ff9800';
                     }
 
-                    html += '<a href="' + survey.url + '" target="_blank" class="limesurvey-link" style="text-decoration: none;">';
+                    var ariaLabelPending = strings.pendingsurvey_aria.replace('{$a}', survey.title);
+                    html += '<li role="listitem" style="list-style: none; padding: 0; margin: 0;">';
+                    html += '<a href="' + survey.url + '" target="_blank" rel="noopener noreferrer" class="limesurvey-link" ' +
+                            'aria-label="' + ariaLabelPending + '" style="text-decoration: none; display: block;">';
                     html += '<div style="padding: 12px 16px; border-radius: 8px; ' +
                             'background: ' + cardBgGradient + '; ' +
                             'border-left: 4px solid ' + cardBorderColor + '; ' +
@@ -308,7 +313,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                     html += '<div style="display: flex; align-items: center; justify-content: space-between;">';
                     html += '<div style="flex: 1;">';
                     html += '<div style="font-weight: 600; color: ' + titleColor + '; margin-bottom: 4px;">' +
-                            '<span style="margin-right: 8px;">→</span>' + survey.title + urgencyBadge + '</div>';
+                            '<span aria-hidden="true" style="margin-right: 8px;">→</span>' + survey.title + urgencyBadge + '</div>';
                     if (extraText) {
                         html += '<div style="font-size: 0.85em; color: ' + extraTextColor + ';">' + extraText + '</div>';
                     }
@@ -330,8 +335,9 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                     var offset = circumference - (percentage / 100) * circumference;
                     var progressColor = percentage < 30 ? '#f44336' : (percentage < 70 ? '#ff9800' : '#4caf50');
 
+                    var progressAriaLabel = strings.progress_aria.replace('{$a}', percentage);
                     html += '<div style="position: relative; width: 48px; height: 48px;">';
-                    html += '<svg width="48" height="48" style="transform: rotate(-90deg);">';
+                    html += '<svg width="48" height="48" role="img" aria-label="' + progressAriaLabel + '" style="transform: rotate(-90deg);">';
                     html += '<circle cx="24" cy="24" r="18" fill="none" stroke="#e0e0e0" stroke-width="4"></circle>';
                     html += '<circle cx="24" cy="24" r="18" fill="none" stroke="' + progressColor + '" ' +
                             'stroke-width="4" stroke-dasharray="' + circumference + '" ' +
@@ -339,13 +345,14 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                             'stroke-linecap="round" ' +
                             'style="transition: stroke-dashoffset 0.5s ease;"></circle>';
                     html += '</svg>';
-                    html += '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); ' +
+                    html += '<div aria-hidden="true" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); ' +
                             'font-size: 0.7em; font-weight: 700; color: ' + progressColor + ';">' +
                             percentage + '%</div>';
                     html += '</div>';
                     html += '</div>';
                     html += '</div>';
                     html += '</a>';
+                    html += '</li>';
                 }
 
                 // Log survey details to console.
@@ -377,7 +384,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
 
             console.groupEnd();
 
-            html += '</div>';
+            html += '</ul>';
             contentDiv.html(html);
 
             // Add pulsing animation to "Expires today" badges.
@@ -480,7 +487,13 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                 {key: 'expirestoday', component: 'block_limesurvey'},
                 {key: 'expired', component: 'block_limesurvey'},
                 {key: 'startdate', component: 'block_limesurvey'},
-                {key: 'expiresdate', component: 'block_limesurvey'}
+                {key: 'expiresdate', component: 'block_limesurvey'},
+                {key: 'surveylist', component: 'block_limesurvey'},
+                {key: 'completedsurvey_aria', component: 'block_limesurvey'},
+                {key: 'pendingsurvey_aria', component: 'block_limesurvey'},
+                {key: 'progress_aria', component: 'block_limesurvey'},
+                {key: 'completedstatus', component: 'block_limesurvey'},
+                {key: 'pendingstatus', component: 'block_limesurvey'}
             ];
 
             console.log('📝 Loading language strings...');
@@ -502,7 +515,13 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                     expirestoday: loadedStrings[10],
                     expired: loadedStrings[11],
                     startdate: loadedStrings[12],
-                    expiresdate: loadedStrings[13]
+                    expiresdate: loadedStrings[13],
+                    surveylist: loadedStrings[14],
+                    completedsurvey_aria: loadedStrings[15],
+                    pendingsurvey_aria: loadedStrings[16],
+                    progress_aria: loadedStrings[17],
+                    completedstatus: loadedStrings[18],
+                    pendingstatus: loadedStrings[19]
                 };
 
                 // Now load surveys with strings available.
