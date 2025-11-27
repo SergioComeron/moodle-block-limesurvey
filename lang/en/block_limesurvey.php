@@ -47,6 +47,7 @@ $string['error_connection'] = 'Error connecting to LimeSurvey.';
 $string['error_loading'] = 'Error loading surveys.';
 $string['error_session'] = 'Error obtaining session key: {$a}';
 $string['hideresponses'] = 'Hide responses';
+$string['limesurvey:addinstance'] = 'Add a new LimeSurvey block';
 $string['limesurvey:myaddinstance'] = 'Add a new LimeSurvey block to the Dashboard';
 $string['loading'] = 'Loading surveys...';
 $string['nosurveys'] = 'You have no active surveys.';

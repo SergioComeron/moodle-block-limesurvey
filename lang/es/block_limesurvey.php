@@ -52,6 +52,7 @@ $string['expiresday'] = 'Expira en 1 día';
 $string['expiresin'] = 'Expira en {$a} días';
 $string['expirestoday'] = '¡Expira hoy!';
 $string['hideresponses'] = 'Ocultar respuestas';
+$string['limesurvey:addinstance'] = 'Agregar un nuevo bloque LimeSurvey';
 $string['limesurvey:myaddinstance'] = 'Agregar un nuevo bloque LimeSurvey al Panel';
 $string['loading'] = 'Cargando encuestas...';
 $string['nosurveys'] = 'No tienes encuestas activas.';

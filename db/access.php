@@ -27,8 +27,17 @@ $capabilities = [
         'captype' => 'write',
         'contextlevel' => CONTEXT_SYSTEM,
         'archetypes' => [
-            'admin' => CAP_ALLOW
+            'manager' => CAP_ALLOW
         ],
         'clonepermissionsfrom' => 'moodle/my:manageblocks'
+    ],
+    'block/limesurvey:addinstance' => [
+        'riskbitmask' => RISK_SPAM | RISK_XSS,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_BLOCK,
+        'archetypes' => [
+            'manager' => CAP_ALLOW
+        ],
+        'clonepermissionsfrom' => 'moodle/site:manageblocks'
     ],
 ];
