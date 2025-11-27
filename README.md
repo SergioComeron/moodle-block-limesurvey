@@ -67,8 +67,14 @@ Password for the API user.
 
 ### Optional Settings
 
-#### 4. Extra Attributes
-Comma-separated list of attribute numbers to retrieve from LimeSurvey participants.
+#### 4. Extra Attributes (Optional)
+Comma-separated list of attribute numbers to display as additional text below survey titles in the block.
+
+**Important notes:**
+- This field is **optional** and can be left empty
+- These attributes will be displayed as extra text below each survey title (e.g., "Mathematics, Dr. Smith")
+- The **Survey Title Format** (see below) works independently and will retrieve all attributes automatically, even if this field is empty
+- If specified, it optimizes API calls by requesting only these attributes in the initial query
 
 **Format options:**
 - Attribute numbers: `8, 12` or `8,12`
@@ -79,6 +85,8 @@ Comma-separated list of attribute numbers to retrieve from LimeSurvey participan
 ```
 8, 12
 ```
+
+**Result:** Displays attribute values as comma-separated text below the survey title.
 
 #### 5. Custom Block Title
 Leave empty to use the default "LimeSurvey Block" title, or enter a custom title.
