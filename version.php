@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'block_limesurvey';
-$plugin->version = 2025112413; // YYYYMMDDXX - Add custom block title configuration option.
+$plugin->version = 2025112616; // YYYYMMDDXX - Fallback to original title when attributes are missing.
 $plugin->requires = 2021051700; // Requires Moodle 3.11 or higher.
 $plugin->maturity = MATURITY_BETA;
-$plugin->release = 'v2.16';
+$plugin->release = 'v2.17';

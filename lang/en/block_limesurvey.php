@@ -60,3 +60,5 @@ $string['expiresday'] = 'Expires in 1 day';
 $string['expirestoday'] = 'Expires today!';
 $string['expired'] = 'Expired';
 $string['viewresponses'] = 'View responses';
+$string['survey_title_format'] = 'Survey title format';
+$string['survey_title_format_desc'] = 'Custom format for survey titles using placeholders. Available placeholders: {title} (original survey title), {attribute_N} (where N is the attribute number, e.g., {attribute_9}, {attribute_12}). Leave empty to use the original survey titles. Example: "{title} - Course: {attribute_12} - Professor: {attribute_9}"';

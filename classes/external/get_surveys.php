@@ -53,6 +53,69 @@ class get_surveys extends external_api {
     }
 
     /**
+     * Format a survey title based on the configured template.
+     *
+     * @param string $originaltitle The original survey title
+     * @param array $participant The participant data containing attributes
+     * @return string The formatted title
+     */
+    private static function format_survey_title($originaltitle, $participant) {
+        $titleformat = get_config('block_limesurvey', 'survey_title_format');
+
+        // If no format is configured, return the original title.
+        if (empty($titleformat)) {
+            return $originaltitle;
+        }
+
+        // Start with the configured format.
+        $formattedtitle = $titleformat;
+
+        // Replace {title} placeholder with the original survey title.
+        $formattedtitle = str_replace('{title}', $originaltitle, $formattedtitle);
+
+        // Replace all placeholders in format {something} with participant data.
+        // This supports both {attribute_N} and custom names like {asignatura}, {nombre_profe}.
+        preg_match_all('/\{([^}]+)\}/', $formattedtitle, $matches);
+
+        // Track if any attribute placeholder is missing or empty.
+        $missingattributes = false;
+
+        if (!empty($matches[0])) {
+            foreach ($matches[0] as $index => $placeholder) {
+                $key = $matches[1][$index];
+
+                // Skip 'title' as it's already replaced.
+                if ($key === 'title') {
+                    continue;
+                }
+
+                // Try to find the value in participant data.
+                // Check multiple possible keys: exact match, with "attribute_" prefix.
+                $value = '';
+                if (isset($participant[$key]) && !empty($participant[$key])) {
+                    $value = $participant[$key];
+                } else if (isset($participant['attribute_' . $key]) && !empty($participant['attribute_' . $key])) {
+                    $value = $participant['attribute_' . $key];
+                } else {
+                    // Attribute is missing or empty - mark as missing.
+                    $missingattributes = true;
+                    self::debug_log('LimeSurvey API - Missing or empty attribute for placeholder: ' . $placeholder);
+                }
+
+                $formattedtitle = str_replace($placeholder, $value, $formattedtitle);
+            }
+        }
+
+        // If any attribute was missing or empty, return the original title instead.
+        if ($missingattributes) {
+            self::debug_log('LimeSurvey API - Some attributes missing, using original title: ' . $originaltitle);
+            return $originaltitle;
+        }
+
+        return $formattedtitle;
+    }
+
+    /**
      * Returns description of method parameters.
      *
      * @return external_function_parameters
@@ -132,6 +195,25 @@ class get_surveys extends external_api {
                 $atributosconfig = get_config('block_limesurvey', 'atributosextra');
                 $atributosarray = array_map('trim', explode(',', $atributosconfig));
 
+                // For list_participants API call, we need attribute names WITHOUT "attribute_" prefix.
+                // E.g., if config has "attribute_8,attribute_9", we need ["8","9"].
+                // If custom names are used (e.g., "nombre_profe"), pass them as-is.
+                $attributenumbers = [];
+                foreach ($atributosarray as $attr) {
+                    if (preg_match('/attribute[_-]?(\d+)/i', $attr, $matches)) {
+                        // Extract number from "attribute_8" → "8".
+                        $attributenumbers[] = $matches[1];
+                    } else if (is_numeric($attr)) {
+                        // If it's just a number "8" → "8".
+                        $attributenumbers[] = $attr;
+                    } else if (!empty($attr)) {
+                        // If it's a custom name like "nombre_profe", pass as-is.
+                        $attributenumbers[] = $attr;
+                    }
+                }
+
+                self::debug_log('LimeSurvey API - Configured attributes: ' . json_encode($atributosarray));
+                self::debug_log('LimeSurvey API - Attribute numbers to request: ' . json_encode($attributenumbers));
                 self::debug_log('LimeSurvey API - Total surveys found: ' . count($response));
                 self::debug_log('LimeSurvey API - Current date: ' . date('Y-m-d H:i:s', $currentdate));
 
@@ -164,13 +246,14 @@ class get_surveys extends external_api {
                     }
 
                     // Get participants for this survey.
+                    // Note: list_participants expects attribute numbers without "attribute_" prefix.
                     $participants = $client->list_participants(
                         $sessionkey,
                         $survey['sid'],
                         0,
                         5000,
                         false,
-                        $atributosarray,
+                        $attributenumbers,
                         ['email' => $USER->email]
                     );
 
@@ -195,6 +278,56 @@ class get_surveys extends external_api {
                         // Debug: Log all participant fields to see what's available.
                         self::debug_log('LimeSurvey API - Participant data for survey ' . $survey['sid'] . ': ' . json_encode($participant));
 
+                        // Try to get full participant properties including all attributes.
+                        // LimeSurvey API: get_participant_properties can use either token OR tid (participant ID).
+                        // We'll try both methods.
+                        $tid = $participant['tid'] ?? null;
+                        $participantprops = null;
+
+                        // Method 1: Try with TID if available.
+                        // First try to get ALL properties (pass empty array or no attributes parameter).
+                        if (!empty($tid)) {
+                            try {
+                                // Try getting ALL participant properties first.
+                                $participantprops = $client->get_participant_properties(
+                                    $sessionkey,
+                                    $survey['sid'],
+                                    (int)$tid
+                                );
+                                self::debug_log('LimeSurvey API - get_participant_properties (TID=' . $tid . ', all props) response: ' . json_encode($participantprops));
+                            } catch (\Exception $e) {
+                                self::debug_log('LimeSurvey API - Error getting all participant properties with TID: ' . $e->getMessage());
+                                $participantprops = null;
+                            }
+                        }
+
+                        // Method 2: Try with token if TID method failed and token is not empty.
+                        if (empty($participantprops) && !empty($token)) {
+                            try {
+                                // Try getting ALL participant properties with token.
+                                $participantprops = $client->get_participant_properties(
+                                    $sessionkey,
+                                    $survey['sid'],
+                                    $token
+                                );
+                                self::debug_log('LimeSurvey API - get_participant_properties (token=' . $token . ', all props) response: ' . json_encode($participantprops));
+                            } catch (\Exception $e) {
+                                self::debug_log('LimeSurvey API - Error getting all participant properties with token: ' . $e->getMessage());
+                                $participantprops = null;
+                            }
+                        }
+
+                        // Merge participant properties into participant array if we got valid data.
+                        if (is_array($participantprops) && !empty($participantprops)) {
+                            // Check if it's an error response.
+                            if (isset($participantprops['status']) && strpos($participantprops['status'], 'Error') !== false) {
+                                self::debug_log('LimeSurvey API - get_participant_properties returned error: ' . $participantprops['status']);
+                            } else {
+                                $participant = array_merge($participant, $participantprops);
+                                self::debug_log('LimeSurvey API - Merged participant data: ' . json_encode($participant));
+                            }
+                        }
+
                         // Check if user has responded and get response data.
                         $responsedata = self::get_survey_response($client, $sessionkey, $survey['sid'], $token);
 
@@ -215,8 +348,11 @@ class get_surveys extends external_api {
                         self::debug_log('LimeSurvey API - Adding survey to results: ' . $survey['surveyls_title'] .
                                   ', completed=' . ($responsedata['completed'] ? 'true' : 'false'));
 
+                        // Format survey title based on configuration.
+                        $formattedtitle = self::format_survey_title($survey['surveyls_title'], $participant);
+
                         $surveys[] = [
-                            'title' => $survey['surveyls_title'],
+                            'title' => $formattedtitle,
                             'url' => $surveyurl,
                             'completed' => $responsedata['completed'],
                             'completion_percentage' => $responsedata['completion_percentage'] ?? 0,

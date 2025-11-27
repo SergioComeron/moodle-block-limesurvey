@@ -60,3 +60,5 @@ $string['pluginname'] = 'Bloque LimeSurvey';
 $string['responses'] = 'Respuestas';
 $string['surveyprogress'] = 'Progreso de encuestas: {$a->completed} de {$a->total} completadas';
 $string['viewresponses'] = 'Ver respuestas';
+$string['survey_title_format'] = 'Formato del título de encuestas';
+$string['survey_title_format_desc'] = 'Formato personalizado para los títulos de encuestas usando marcadores de posición. Marcadores disponibles: {title} (título original de la encuesta), {attribute_N} (donde N es el número de atributo, ej., {attribute_9}, {attribute_12}). Déjelo vacío para usar los títulos originales. Ejemplo: "{title} - Curso: {attribute_12} - Profesor: {attribute_9}"';
