@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'block_limesurvey';
-$plugin->version = 2025112704; // YYYYMMDDXX - Added accessibility improvements.
+$plugin->version = 2025112707; // YYYYMMDDXX - Keep completed surveys clickable.
 $plugin->requires = 2021051700; // Requires Moodle 3.11 or higher.
 $plugin->maturity = MATURITY_BETA;
-$plugin->release = 'v2.20';
+$plugin->release = 'v2.23';

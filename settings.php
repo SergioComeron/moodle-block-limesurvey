@@ -93,4 +93,13 @@ if ($ADMIN->fulltree) {
         '', // Valor por defecto: vacío (usa el título original)
         PARAM_TEXT
     ));
+
+    // Campo de configuración para formatos de título por ID de encuesta.
+    $settings->add(new admin_setting_configtextarea(
+        'block_limesurvey/survey_title_formats_by_id',
+        get_string('survey_title_formats_by_id', 'block_limesurvey'),
+        get_string('survey_title_formats_by_id_desc', 'block_limesurvey'),
+        '', // Valor por defecto: vacío
+        PARAM_TEXT
+    ));
 }

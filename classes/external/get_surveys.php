@@ -56,13 +56,35 @@ class get_surveys extends external_api {
      * Format a survey title based on the configured template.
      *
      * @param string $originaltitle The original survey title
+     * @param int $surveyid The survey ID
      * @param array $participant The participant data containing attributes
      * @return string The formatted title
      */
-    private static function format_survey_title($originaltitle, $participant) {
-        $titleformat = get_config('block_limesurvey', 'survey_title_format');
+    private static function format_survey_title($originaltitle, $surveyid, $participant) {
+        // First, check if there's a specific format for this survey ID.
+        $formatsbyid = get_config('block_limesurvey', 'survey_title_formats_by_id');
+        $titleformat = null;
 
-        // If no format is configured, return the original title.
+        if (!empty($formatsbyid)) {
+            // Try to parse JSON configuration.
+            $formatsjson = json_decode($formatsbyid, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($formatsjson)) {
+                // Check if this survey ID has a specific format.
+                if (isset($formatsjson[$surveyid])) {
+                    $titleformat = $formatsjson[$surveyid];
+                    self::debug_log('LimeSurvey API - Using specific format for survey ' . $surveyid . ': ' . $titleformat);
+                }
+            } else {
+                self::debug_log('LimeSurvey API - Error parsing survey_title_formats_by_id JSON: ' . json_last_error_msg());
+            }
+        }
+
+        // If no specific format found, use the general format.
+        if (empty($titleformat)) {
+            $titleformat = get_config('block_limesurvey', 'survey_title_format');
+        }
+
+        // If no format is configured at all, return the original title.
         if (empty($titleformat)) {
             return $originaltitle;
         }
@@ -331,6 +353,20 @@ class get_surveys extends external_api {
                         // Check if user has responded and get response data.
                         $responsedata = self::get_survey_response($client, $sessionkey, $survey['sid'], $token);
 
+                        // Check usesleft to determine if survey was submitted.
+                        // In LimeSurvey, when a token is created, usesleft is usually 1.
+                        // When the survey is submitted, usesleft becomes 0, -1, -2, etc. (depending on multiple submissions).
+                        // So we check if it's different from 1 to determine if it was submitted at least once.
+                        $usesleft = isset($participant['usesleft']) ? (int)$participant['usesleft'] : 1;
+                        $submitted = ($usesleft !== 1);
+
+                        self::debug_log('LimeSurvey API - Survey ' . $survey['sid'] . ' usesleft: ' . $usesleft . ', submitted: ' . ($submitted ? 'yes' : 'no'));
+
+                        // Override completed status if survey was submitted (usesleft != 1).
+                        if ($submitted) {
+                            $responsedata['completed'] = true;
+                        }
+
                         // Build survey URL.
                         $parsedurl = parse_url($apiurl);
                         $baseurl = $parsedurl['scheme'] . '://' . $parsedurl['host'] . $parsedurl['path'];
@@ -349,7 +385,7 @@ class get_surveys extends external_api {
                                   ', completed=' . ($responsedata['completed'] ? 'true' : 'false'));
 
                         // Format survey title based on configuration.
-                        $formattedtitle = self::format_survey_title($survey['surveyls_title'], $participant);
+                        $formattedtitle = self::format_survey_title($survey['surveyls_title'], $survey['sid'], $participant);
 
                         $surveys[] = [
                             'title' => $formattedtitle,

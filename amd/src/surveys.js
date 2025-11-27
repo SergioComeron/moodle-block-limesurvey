@@ -223,12 +223,20 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
 
                 // Card-style design for each survey.
                 if (survey.completed) {
-                    // Completed survey - gray card, not clickable.
+                    // Completed survey - green card, still clickable to allow re-editing.
                     var ariaLabelCompleted = strings.completedsurvey_aria.replace('{$a}', survey.title);
-                    html += '<li role="listitem" aria-label="' + ariaLabelCompleted + '" style="padding: 12px 16px; border-radius: 8px; ' +
+                    html += '<li role="listitem" style="list-style: none; padding: 0; margin: 0;">';
+                    html += '<a href="' + survey.url + '" target="_blank" rel="noopener noreferrer" class="limesurvey-link" ' +
+                            'aria-label="' + ariaLabelCompleted + '" style="text-decoration: none; display: block;">';
+                    html += '<div style="padding: 12px 16px; border-radius: 8px; ' +
                             'background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); ' +
                             'border-left: 4px solid #4caf50; ' +
-                            'box-shadow: 0 2px 4px rgba(0,0,0,0.1);">';
+                            'box-shadow: 0 2px 4px rgba(0,0,0,0.1); ' +
+                            'transition: all 0.2s; cursor: pointer;" ' +
+                            'onmouseover="this.style.boxShadow=\'0 4px 8px rgba(0,0,0,0.15)\'; ' +
+                            'this.style.transform=\'translateY(-2px)\';" ' +
+                            'onmouseout="this.style.boxShadow=\'0 2px 4px rgba(0,0,0,0.1)\'; ' +
+                            'this.style.transform=\'translateY(0)\';">';
                     html += '<div style="display: flex; align-items: center; justify-content: space-between;">';
                     html += '<div style="flex: 1;">';
                     html += '<div style="font-weight: 600; color: #2e7d32; margin-bottom: 4px;">' +
@@ -252,20 +260,8 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'], function($, Aja
                             'border-radius: 12px; font-size: 0.75em; font-weight: 600; ' +
                             'text-transform: uppercase; letter-spacing: 0.5px;">' + strings.completedstatus + '</span>';
                     html += '</div>';
-
-                    // Add view responses button if completed and has responses.
-                    if (Object.keys(survey.responses).length > 0) {
-                        html += '<button class="btn btn-sm view-responses" data-survey-id="' +
-                                surveyId + '" aria-label="' + strings.viewresponses + ' ' + survey.title + '" style="margin-top: 8px; padding: 6px 12px; ' +
-                                'background: white; border: 1px solid #4caf50; color: #4caf50; ' +
-                                'border-radius: 4px; font-size: 0.85em; cursor: pointer; ' +
-                                'transition: all 0.2s;">' +
-                                '<span aria-hidden="true">📊 </span>' + strings.viewresponses + '</button>';
-                        html += '<div id="' + surveyId + '-responses" class="survey-responses" ' +
-                                'style="display: none; margin-top: 8px; padding: 12px; ' +
-                                'background: white; border-radius: 4px; border: 1px solid #c8e6c9;" role="region" ' +
-                                'aria-label="' + strings.responses + ' ' + survey.title + '"></div>';
-                    }
+                    html += '</div>';
+                    html += '</a>';
                     html += '</li>';
                 } else {
                     // Pending survey - blue card, clickable.
